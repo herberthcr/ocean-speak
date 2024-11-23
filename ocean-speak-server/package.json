@@ -1,0 +1,16 @@
+{
+  "name": "socket.io-multiplayer",
+  "version": "0.0.0",
+  "description": "A simple game client using socket.io",
+  "main": "server.js",
+  "author": "Herberth Castro",
+  "private": true,
+  "license": "BSD",
+  "dependencies": {
+    "express": "~4.17.1",
+    "socket.io": "^4.0.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
