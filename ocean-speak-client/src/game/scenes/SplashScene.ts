@@ -16,7 +16,7 @@ export class SplashScene extends Scene
     create ()
     {
         
-        this.add.image(512, 384, 'background');
+        this.add.image(0, 0, 'background').setOrigin(1);
         this.logo =  this.add.image(512, 350, 'logo').setDepth(100).setScale(0.80);
 
         const fx = this.logo.postFX.addShine(0.3, .2, 1);
@@ -39,6 +39,9 @@ export class SplashScene extends Scene
     
         // Add Input System
         this.world.addSystem(new InputSystem(this, this.world));
+
+        this.add.shader('waterShader',  0,0, this.scale.width, this.scale.height).setOrigin(0);
+
    }
  
    update(time: number, delta: number): void {

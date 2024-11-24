@@ -15,6 +15,8 @@ export class PreloadScene extends Scene
         this.load.setPath('assets');
         this.load.image('background', 'bg.png');
         this.load.image('logo', 'ocean-speech.png');
+        this.load.glsl('waterShader', 'shaders/waterShader.frag'); // Path to your shader file
+        this.load.glsl('tunneShader', 'shaders/shader1.frag'); // will use later
 
         // Preload tileset and spritesheet
         this.load.image('ocean_tiles', 'ocean_tiles.png'); // Path to tileset

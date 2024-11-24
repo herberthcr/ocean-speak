@@ -29,6 +29,9 @@ export class UnderWaterScene extends Scene
           
         create(): void {
 
+          this.add.image(0, 0, 'background').setOrigin(1);
+          this.add.shader('waterShader',  0,0, this.scale.width, this.scale.height).setOrigin(0);
+
           // Initialize the ECS World
           this.world = new ECSWorld();
 
@@ -38,10 +41,12 @@ export class UnderWaterScene extends Scene
           // Creat Animations
           this.createAnimations();
         
+
+          // NEED TO CHECK WHY IS NOT WORKING WITH SHADER, USING AN STATIC BG FOR NOW
            // Add Rendering System
-          const renderingSystem = new RenderingSystem(this, this.world);
-          this.world.addSystem(renderingSystem);
-          renderingSystem.setupTilemap('ocean_tilemap', 'ocean_tiles', ['waterLayer', 'sandLayer' ]); 
+          //const renderingSystem = new RenderingSystem(this, this.world);
+          //this.world.addSystem(renderingSystem);
+          //renderingSystem.setupTilemap('ocean_tilemap', 'ocean_tiles', ['waterLayer', 'sandLayer' ]); 
 
           this.world.addSystem(new AnimationSystem(this, this.world));
 
@@ -49,16 +54,12 @@ export class UnderWaterScene extends Scene
           this.world.addComponent(stateEntity, 'state', { phase: 'gameplay' });
           this.world.addSystem(new InputSystem(this, this.world));
 
-
-          //// Create the plant group and add a name for easy access
-          //const plantGroup = this.add.group();
-          //plantGroup.setName('plantGroup');
-
-           // Add fish and fish banks
+          // Add fish and fish banks
           this.createFishBanks(2); // Create 2 fish banks
           // Add random fishes
           this.createRandomFishes();
-          this.createPlants(this.plantGroup);
+          // Create plants 
+         this.createPlants(this.plantGroup);
 
           EventBus.emit('current-scene-ready', this);
          }
