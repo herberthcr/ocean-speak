@@ -36,6 +36,9 @@ export class UnderWaterScene extends Scene
           renderingSystem.setupTilemap('ocean_tilemap', 'ocean_tiles', ['waterLayer', 'sandLayer', ]);
 
           this.world.addSystem(new AnimationSystem(this, this.world));
+
+          const stateEntity = this.world.createEntity();
+          this.world.addComponent(stateEntity, 'state', { phase: 'gameplay' });
           this.world.addSystem(new InputSystem(this, this.world));
 
           // Add random fishes

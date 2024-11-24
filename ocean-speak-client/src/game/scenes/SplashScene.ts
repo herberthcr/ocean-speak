@@ -1,9 +1,12 @@
 import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
+import { ECSWorld } from '../ecs/ECSWorld';
+import { InputSystem } from '../systems/InputSystem';
 
 export class SplashScene extends Scene
 {
     private logo: any;
+    private world: ECSWorld;
     constructor ()
     {
         super('SplashScene');
@@ -29,7 +32,18 @@ export class SplashScene extends Scene
         });
         
         EventBus.emit('current-scene-ready', this);
-    }
+        // Create ECS world and add the State component
+        this.world = new ECSWorld();
+        const stateEntity = this.world.createEntity();
+        this.world.addComponent(stateEntity, 'state', { phase: 'intro' });
+    
+        // Add Input System
+        this.world.addSystem(new InputSystem(this, this.world));
+   }
+ 
+   update(time: number, delta: number): void {
+     this.world.update(delta); // Update the ECS world
+   }
 
     playGame ()
     {
