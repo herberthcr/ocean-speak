@@ -1,20 +1,21 @@
 import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
-import { MovementSystem } from '../systems/MovementSystem';
 import { AnimationSystem } from '../systems/AnimationSystem';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { InputSystem } from '../systems/InputSystem';
 import { ECSWorld } from '../ecs/ECSWorld';
+import { Position } from '../components/Position';
+import { Velocity } from '../components/Velocity';
+import { GameObjectComponent } from '../components/GameObjectComponent';
 
 export class UnderWaterScene extends Scene
 {
     private world!: ECSWorld;
-    private movementSystem!: MovementSystem;
-    private animationSystem!: AnimationSystem;
-    private renderingSystem!: RenderingSystem;
-    private inputSystem!: InputSystem;
-    private maxFish = 10; // Limit to 10 fishes
-    private fishTypes = ['swimBlue', 'swimRed', 'swimOrange']; // Define fish animation types
+    private maxFish = 20; // Limit to 10 fishes
+    private fishSpeed = 50;
+    private fishTypes = ['swimBlue', 'swimRed', 'swimOrange', 'greenFish','purpleFish']; // Define fish animation types
+    private plantsTypes = ['greenPlant', 'purplePlant', 'bluePlant']; // Define fish animation types
+    private waterHeight = 576;
 
     constructor ()
     {
@@ -23,69 +24,86 @@ export class UnderWaterScene extends Scene
           
         create(): void {
 
-
-            // Initialize the ECS World
-            this.world = new ECSWorld();
+          // Initialize the ECS World
+          this.world = new ECSWorld();
             
-            // Create Tilemap and Animations
-           // this.createTilemap();
-            this.createAnimations();
+          // Creat Animations
+          this.createAnimations();
         
-            // Initialize Systems
-            this.movementSystem = new MovementSystem();
-            this.animationSystem = new AnimationSystem(this, this.world);
-            this.renderingSystem = new RenderingSystem(this, this.world);
-            this.inputSystem = new InputSystem(this, this.world);
+           // Add Rendering System
+          const renderingSystem = new RenderingSystem(this, this.world);
+          this.world.addSystem(renderingSystem);
+          renderingSystem.setupTilemap('ocean_tilemap', 'ocean_tiles', ['waterLayer', 'sandLayer', ]);
 
-            // Create Tilemap through RenderingSystem
-            this.renderingSystem.setupTilemap('ocean_tilemap', 'ocean_tiles', ['waterLayer', 'sandLayer', ]);
+          this.world.addSystem(new AnimationSystem(this, this.world));
+          this.world.addSystem(new InputSystem(this, this.world));
 
-            // Add random fishes
-            this.createRandomFishes();
+          // Add random fishes
+          this.createRandomFishes();
+          this.createPlants();
 
-            EventBus.emit('current-scene-ready', this);
-          }
+          EventBus.emit('current-scene-ready', this);
+         }
         
           update(time: number, delta: number): void {
-            const deltaInSeconds = delta / 1000;
-            // Update Systems
-            this.movementSystem.update(this.world.getEntitiesByComponent('velocity'), deltaInSeconds);
-            this.animationSystem.update(deltaInSeconds);
+            this.world.update(delta);
+            //const deltaInSeconds = delta / 1000;
           }
-
-         /* private createTilemap(): void {
- 
-            // create the Tilemap
-            const map = this.make.tilemap({ key: 'ocean_tilemap' });
-
-            // add the tileset image we are using
-            const tileset = map.addTilesetImage('ocean_tiles', 'ocean_tiles')
-            
-            // create the layers we want in the right order
-            // "Sand" layer will be on top of "water" layer
-            map.createLayer('sandLayer', tileset, 0, 0).setDepth(2); // Sand at the bottom
-            map.createLayer('waterLayer', tileset).setDepth(1); // Sand at the bottom
-         }*/
           
           private createAnimations(): void {
             this.anims.create({
               key: 'swimBlue',
-              frames: this.anims.generateFrameNumbers('fishSprites', { start: 76, end: 77 }),
+              frames: this.anims.generateFrameNumbers('sprites', { start: 76, end: 77 }),
               frameRate: 8,
               repeat: -1,
             });
         
             this.anims.create({
               key: 'swimRed',
-              frames: this.anims.generateFrameNumbers('fishSprites', { start: 78, end: 79 }),
+              frames: this.anims.generateFrameNumbers('sprites', { start: 78, end: 79 }),
               frameRate: 8,
               repeat: -1,
             });
 
             this.anims.create({
                 key: 'swimOrange',
-                frames: this.anims.generateFrameNumbers('fishSprites', { start: 80, end: 81 }),
+                frames: this.anims.generateFrameNumbers('sprites', { start: 80, end: 81 }),
                 frameRate: 8,
+                repeat: -1,
+              });
+
+              this.anims.create({
+                key: 'greenFish',
+                frames: this.anims.generateFrameNumbers('sprites', { start: 72, end: 73 }),
+                frameRate: 8,
+                repeat: -1,
+              });
+
+              this.anims.create({
+                key: 'purpleFish',
+                frames: this.anims.generateFrameNumbers('sprites', { start: 74, end: 75 }),
+                frameRate: 8,
+                repeat: -1,
+              });
+
+             this.anims.create({
+                key: 'greenPlant',
+                frames: this.anims.generateFrameNumbers('sprites', { start: 30, end: 31 }),
+                frameRate: 2,
+                repeat: -1,
+              });
+
+              this.anims.create({
+                key: 'purplePlant',
+                frames: this.anims.generateFrameNumbers('sprites', { start: 11, end: 12 }),
+                frameRate: 2,
+                repeat: -1,
+              });
+
+              this.anims.create({
+                key: 'bluePlant',
+                frames: this.anims.generateFrameNumbers('sprites', { start: 66, end: 67 }),
+                frameRate: 2,
                 repeat: -1,
               });
           }
@@ -93,7 +111,7 @@ export class UnderWaterScene extends Scene
           createRandomFishes(): void {
             for (let i = 0; i < this.maxFish; i++) {
               const x = Phaser.Math.Between(0, this.scale.width);
-              const y = Phaser.Math.Between(0, this.scale.height);
+              const y = Phaser.Math.Between(0, this.waterHeight);
               const vx = Phaser.Math.FloatBetween(-100, 100); // Random velocity
               const vy = Phaser.Math.FloatBetween(-100, 100);
               const type = Phaser.Math.RND.pick(this.fishTypes); // Random type
@@ -104,14 +122,39 @@ export class UnderWaterScene extends Scene
 
 
         createFish(x: number, y: number, vx: number, vy: number, _animationKey: string): void {
-                const fishEntity = this.world.createEntity();
-                const fishSprite = this.add.sprite(x, y, 'fishSprites').play(_animationKey).setDepth(10);
-            
-                fishEntity
-                  .addComponent('type', { value: 'fish' }) // Specify type as 'fish'
-                  .addComponent('position', { x, y })
-                  .addComponent('velocity', { vx, vy })
-                  .addComponent('sprite', { sprite: fishSprite })
-                  .addComponent('animation', { animationKey: _animationKey });
+
+          const entityId = this.world.createEntity();
+
+          const sprite = this.add.sprite(x, y, 'sprites').play(_animationKey).setDepth(10);
+          const gameObject: GameObjectComponent = { sprite, type: 'fish' };
+          const position: Position = { x, y };
+          const speed = Phaser.Math.Between(50, 100);  // Random speed for each fish
+          const velocity: Velocity = { vx: Phaser.Math.Between(-this.fishSpeed, this.fishSpeed), vy: Phaser.Math.Between(-this.fishSpeed, this.fishSpeed), speed };
+        
+         // debugger
+          this.world.addComponent<GameObjectComponent>(entityId, 'gameObject', gameObject);
+          this.world.addComponent<Position>(entityId, 'position', position);
+          this.world.addComponent<Velocity>(entityId, 'velocity', velocity);
         }  
+
+        createPlants(): void {
+          const plantCount = 25;
+          for (let i = 0; i < plantCount; i++) {
+            const type = Phaser.Math.RND.pick(this.plantsTypes); // Random type
+            const x = Phaser.Math.Between(50, this.scale.width - 50);
+            const y = Phaser.Math.Between(this.scale.height - 222, this.scale.height - 50);
+        
+            const entityId = this.world.createEntity();
+        
+          //  const sprite = this.add.sprite(x, y, 'sprites').setDepth(5);
+            const sprite = this.add.sprite(x, y, 'sprites').play(type).setDepth(5);
+            const gameObject: GameObjectComponent = { sprite, type: 'plant' };
+            const position: Position = { x, y };
+        
+            this.world.addComponent(entityId, 'position', position);
+            this.world.addComponent(entityId, 'gameObject', gameObject);
+            this.world.addComponent(entityId, 'size', { currentSize: 1.0 }); // Initial size
+          }
+        }
+        
     }

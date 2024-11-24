@@ -2,16 +2,16 @@ import { ECSWorld } from '../ecs/ECSWorld';
 import Phaser from 'phaser';
 import { System } from './System';
 
+
 export class RenderingSystem extends System {
-
-  private tilemap?: Phaser.Tilemaps.Tilemap;
+  private tilemap!: Phaser.Tilemaps.Tilemap;
+ // private tilemap?: Phaser.Tilemaps.Tilemap;
   private layers: Map<string, Phaser.Tilemaps.TilemapLayer> = new Map();
-  private tileset?: Phaser.Tilemaps.Tileset;
+  private tileset!: Phaser.Tilemaps.Tileset;
 
-
-    constructor(scene: Phaser.Scene, world: ECSWorld) {
-      super(world, scene);
-    }
+  constructor(scene: Phaser.Scene, world: ECSWorld) {
+    super(world, scene);
+  }
 
   setupTilemap(mapKey: string, tilesetKey: string, layerNames: string[]): void {
     // create the Tilemap
@@ -28,5 +28,4 @@ export class RenderingSystem extends System {
       }
     });
   }
-  update(): void {}
 }

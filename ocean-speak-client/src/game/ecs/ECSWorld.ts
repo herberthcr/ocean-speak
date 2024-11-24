@@ -1,45 +1,49 @@
+import { System } from '../systems/System';
+
 export class ECSWorld {
-    private entities: Map<number, Entity> = new Map();
-    private nextId = 0;
+
+    private entities: Map<number, Map<string, any>> = new Map();
+    private systems: Array<System> = [];
+    private entityIdCounter = 0;
   
-    createEntity(): Entity {
-      const entity = new Entity(this.nextId++);
-      this.entities.set(entity.id, entity);
-      return entity;
+    createEntity(): number {
+      const id = this.entityIdCounter++;
+      this.entities.set(id, new Map());
+      return id;
     }
   
-    getEntitiesByComponent(componentName: string): Entity[] {
-      return Array.from(this.entities.values()).filter((entity) => entity.hasComponent(componentName));
-    }
-  }
-  
-  export class Entity {
-    public id: number;
-    private components: Map<string, any> = new Map();
-    private data: Map<string, any> = new Map();
-  
-    constructor(id: number) {
-      this.id = id;
+    deleteEntity(entityId: number): void {
+      this.entities.delete(entityId);
     }
   
-    addComponent<T>(name: string, component: T): this {
-      this.components.set(name, component);
-      return this;
+    addComponent(entityId: number, name: string, component: any): void {
+      const entity = this.entities.get(entityId);
+      if (entity) {
+        entity.set(name, component);
+      }
     }
   
-    getComponent<T>(name: string): T | undefined {
-      return this.components.get(name);
+    getComponent(entityId: number, name: string): any | undefined {
+      return this.entities.get(entityId)?.get(name);
     }
   
-    hasComponent(name: string): boolean {
-      return this.components.has(name);
+    queryEntities(componentNames: string[]): number[] {
+      const results: number[] = [];
+      for (const [id, components] of this.entities.entries()) {
+        if (componentNames.every(name => components.has(name))) {
+          results.push(id);
+        }
+      }
+      return results;
     }
   
-    setData(key: string, value: any): void {
-      this.data.set(key, value);
+    addSystem(system: System): void {
+      this.systems.push(system);
     }
   
-    getData(key: string): any {
-      return this.data.get(key);
+    update(delta: number): void {
+      for (const system of this.systems) {
+        system.update(delta);
+      }
     }
   }
