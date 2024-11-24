@@ -17,7 +17,7 @@ export class RenderingSystem extends System {
     // create the Tilemap
     this.tilemap = this.scene.make.tilemap({ key: mapKey });
     // add the tileset image we are using
-    this.tileset = this.tilemap.addTilesetImage(tilesetKey, tilesetKey);
+    this.tileset = this.tilemap.addTilesetImage(tilesetKey, tilesetKey, 64, 64);
 
     // Create each layer
     layerNames.forEach((layerName, index) => {

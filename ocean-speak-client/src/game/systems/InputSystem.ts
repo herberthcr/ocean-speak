@@ -2,6 +2,7 @@ import { ECSWorld } from '../ecs/ECSWorld';
 import Phaser from 'phaser';
 import { System } from './System';
 import { Size } from '../components/Size';
+import { UnderWaterScene } from '../scenes/UnderWaterScene';
 
 export class InputSystem extends System {
 
@@ -61,13 +62,41 @@ export class InputSystem extends System {
 
             // Check if the click/tap is on the plant
             if (bounds.contains(x, y)) {
-              // Grow the plant
-              size.currentSize += 0.2; // Increment size
-              gameObject.sprite.setScale(size.currentSize); // Apply new size visually
+              this.growAllPlants();
             }
           }
         }
+    }
   }
+
+    growAllPlants (){
+      
+     const plantGroup = (this.scene as UnderWaterScene).plantGroup; 
+     // If any plant was clicked, grow all plants
+     plantGroup.getChildren().forEach((plant) => {
+      const plantSprite = plant as Phaser.GameObjects.Sprite;
+
+      // Find the corresponding ECS entity to update its size component
+      const entities = this.world.queryEntities(['gameObject', 'size']);
+      for (const entityId of entities) {
+        const gameObject = this.world.getComponent<GameObjectComponent>(entityId, 'gameObject');
+        const size = this.world.getComponent<Size>(entityId, 'size');
+
+        if (gameObject.sprite === plantSprite) {
+          size.currentSize += 0.2; // Increment the size
+          plantSprite.setScale(size.currentSize); // Apply the new size visually
+
+          this.scene.tweens.add({
+            targets: gameObject.sprite,
+            scale: size.currentSize + 0.5, // Slightly larger scale for feedback
+            duration: 100,
+            yoyo: true, // Return to normal size
+          });
+          break;
+        }
+      }
+    });  
   }
+
   update(): void { }
 }
