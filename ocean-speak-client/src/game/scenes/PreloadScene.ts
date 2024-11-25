@@ -1,36 +1,43 @@
 import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
+import { BACKGROUNDS, SHADERS, ASSETS, IMAGES, SCENES } from '../global/Constants';
 
 export class PreloadScene extends Scene
 {
-    private logo: any;
     constructor ()
     {
         super('PreloadScene');
-        this.logo = null;
     }
 
     preload ()
     {
-        this.load.setPath('assets');
-        this.load.image('background', 'bg.png');
-        this.load.image('logo', 'ocean-speech.png');
-        this.load.glsl('waterShader', 'shaders/waterShader.frag'); // Path to your shader file
-        this.load.glsl('tunneShader', 'shaders/shader1.frag'); // will use later
+        this.load.setPath(ASSETS);
 
+        // Add backgrounds
+        this.load.image(BACKGROUNDS.OCEAN_COMPLETE, 'ocean.png');
+        this.load.image(BACKGROUNDS.OCEAN_REVERSE, 'ocean_reverse.png');
+        this.load.image(BACKGROUNDS.WATER_EFFECT, 'waterEffect.png');
+
+        // Add Images
+        this.load.atlas(IMAGES.BUBBLES, 'bubbles.png', 'bubbles.json')
+        this.load.image(IMAGES.LOGO, 'ocean-speech.png');
         // Preload tileset and spritesheet
-        this.load.image('ocean_tiles', 'ocean_tiles.png'); // Path to tileset
+        this.load.image(IMAGES.OCEAN_TILES, 'ocean_tiles.png'); // Path to tileset
+
+        // Add Shaders
+        this.load.glsl(SHADERS.WATER_SHADER, 'shaders/waterShader.frag'); // Water ripple shader file
+        this.load.glsl(SHADERS.TUNNEL_SHADER, 'shaders/tunnel.frag'); // Splash shader file
 
 	    // load the JSON file
-	    this.load.tilemapTiledJSON('ocean_tilemap', 'ocean_tiles.json');
+	    this.load.tilemapTiledJSON(IMAGES.OCEAN_TILEMAP, 'ocean_tiles.json');
 
-        this.load.spritesheet('sprites', 'ocean_tiles.png', {
+        this.load.spritesheet(IMAGES.SPRITES, 'ocean_tiles.png', {
             frameWidth: 64,
             frameHeight: 64,
           });
     }
 
     create() {
-        this.scene.start("SplashScene");
+        this.scene.start(SCENES.SPLASH_SCREEN);
     }
 }

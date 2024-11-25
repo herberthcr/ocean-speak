@@ -7,6 +7,7 @@ import { Velocity } from '../components/Velocity';
 import { Size } from '../components/Size';
 import { GameObjectComponent } from '../components/GameObjectComponent';
 import { UnderWaterScene } from '../scenes/UnderWaterScene';
+import { SCREEN } from '../global/Constants';
 
 export class AnimationSystem extends System {
   private elapsedTime: number = 0;
@@ -53,7 +54,7 @@ export class AnimationSystem extends System {
         velocity.vx *= -1; // Reverse direction horizontally
       }
 
-      if (position.y <= 0 || position.y >=  this.scene.waterHeight) {
+      if (position.y <= 0 || position.y >=  SCREEN.WATERHEIGHT) {
         velocity.vy *= -1; // Reverse direction vertically
       }
 
@@ -128,8 +129,8 @@ export class AnimationSystem extends System {
         const velocity = this.world.getComponent<Velocity>(entityId, 'velocity');
 
         // Move the fish in the bank
-        position.x += velocity.vx * delta/500 * velocity.speed * 0.001;
-        position.y += velocity.vy * delta/500 * velocity.speed * 0.001;
+        position.x += velocity.vx * delta/600 * velocity.speed * 0.001;
+        position.y += velocity.vy * delta/600 * velocity.speed * 0.001;
 
         // Update sprite position
         sprite.setPosition(position.x, position.y);
@@ -165,67 +166,7 @@ export class AnimationSystem extends System {
           sprite.rotation = angle; // Rotate the fish to face its movement direction
         }
       });
-    });
-      
-          // Handle fish banks
-
-      // Handle fish banks
-    /*  (this.scene as UnderWaterScene).fishBankGroups.forEach((bankGroup) => {
-        let bankDirectionChanged = false;
-        const bounds = this.scene.sys.game.canvas.getBoundingClientRect();
-
-        bankGroup.getChildren().forEach((fish) => {
-          const sprite = fish as Phaser.GameObjects.Sprite;
-
-          // Find corresponding ECS entity
-          const entityId = this.findEntityBySprite(sprite);
-          if (entityId === null) return;
-
-          const position = this.world.getComponent<Position>(entityId, 'position');
-          const velocity = this.world.getComponent<Velocity>(entityId, 'velocity');
-
-          // Move the fish in the bank
-          position.x += velocity.vx * delta * velocity.speed * 0.001;
-          position.y += velocity.vy * delta * velocity.speed * 0.001;
-
-          // Update sprite position
-          sprite.setPosition(position.x, position.y);
-
-          // Check for bounds collision (if one fish hits bounds, reverse the whole bank)
-          if (!bankDirectionChanged && (position.x <= 0 || position.x >= bounds.width)) {
-            velocity.vx *= -1;
-            bankDirectionChanged = true;
-          }
-
-          // Update sprite rotation
-          const angle = Math.atan2(velocity.vy, velocity.vx);
-          sprite.rotation = angle;
-
-          // Check for collision with other fish (leave bank)
-          (this.scene as UnderWaterScene).fishBankGroups.forEach((otherBank) => {
-            if (otherBank === bankGroup) return;
-
-            otherBank.getChildren().forEach((otherFish) => {
-              const otherBounds = (otherFish as Phaser.GameObjects.Sprite).getBounds();
-              if (sprite.getBounds().intersects(otherBounds)) {
-                otherBank.remove(sprite); // Remove from current bank
-              }
-            });
-          });
-        });
-
-        // Update all fish in the bank to the new velocity if direction changed
-        if (bankDirectionChanged) {
-          bankGroup.getChildren().forEach((fish) => {
-            const entityId = this.findEntityBySprite(fish as Phaser.GameObjects.Sprite);
-            if (entityId !== null) {
-              const velocity = this.world.getComponent<Velocity>(entityId, 'velocity');
-              velocity.vx *= -1; // Reverse direction
-            }
-          });
-        }
-      });*/
-  
+    });    
 }
 
 

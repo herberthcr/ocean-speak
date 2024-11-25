@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
 import { ECSWorld } from '../ecs/ECSWorld';
 import { InputSystem } from '../systems/InputSystem';
+import { DEFAULT_DIFFICULTY, BACKGROUNDS, SHADERS } from '../global/Constants';
 
 export class SplashScene extends Scene
 {
@@ -15,12 +16,11 @@ export class SplashScene extends Scene
 
     create ()
     {
-        
-        this.add.image(0, 0, 'background').setOrigin(1);
+        this.add.image(0, 0, BACKGROUNDS.OCEAN_COMPLETE).setOrigin(0);
         this.logo =  this.add.image(512, 350, 'logo').setDepth(100).setScale(0.80);
+        this.add.shader(SHADERS.TUNNEL_SHADER,  0,0, this.scale.width, this.scale.height).setOrigin(0);
 
         const fx = this.logo.postFX.addShine(0.3, .2, 1);
-
         this.add.tween({
           targets:  this.logo,
           scaleX: 0.81,
@@ -39,9 +39,6 @@ export class SplashScene extends Scene
     
         // Add Input System
         this.world.addSystem(new InputSystem(this, this.world));
-
-        this.add.shader('waterShader',  0,0, this.scale.width, this.scale.height).setOrigin(0);
-
    }
  
    update(time: number, delta: number): void {
