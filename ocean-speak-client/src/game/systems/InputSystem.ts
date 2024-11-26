@@ -4,16 +4,20 @@ import { System } from './System';
 import { Size } from '../components/Size';
 import { Velocity } from '../components/Velocity';
 import { UnderWaterScene } from '../scenes/UnderWaterScene';
-import {  FONTS, SOUNDS } from '../global/Constants';
-
+import {  FONTS, SOUNDS, IMAGES, SCENES } from '../global/Constants';
+import { GameStateSystem } from './GameStateSystem';
 
 export class InputSystem extends System {
 
-  constructor(scene: Phaser.Scene, world: ECSWorld) {
+  private gameStateSystem: GameStateSystem; // Reference to the game state manager
+  private correctAnswersText: Phaser.GameObjects.BitmapText;
+
+  constructor(scene: Phaser.Scene, world: ECSWorld, gameStateSystem: GameStateSystem) {
     super(world, scene);
 
     // Set up global input listener
     this.scene.input.on('pointerdown', this.handlePointerDown, this);
+    this.gameStateSystem = gameStateSystem;
   }
 
   handlePointerDown(pointer: Phaser.Input.Pointer): void {
@@ -104,6 +108,9 @@ export class InputSystem extends System {
       scene.sound.play(SOUNDS.INCORRECT_SOUND); // Preloaded key for the "Wrong" sound
     }else{
       scene.sound.play(SOUNDS.CORRECT_SOUND); // Preloaded key for the "Correct" sound
+      this.gameStateSystem.incrementCorrectAnswers(); // Increment correct answers
+    //  scene.correctAnswers++;
+    this.scene.correctAnswersText.setText(`Correct: ${this.gameStateSystem.getCorrectAnswers()}`); // Update the counter
     }
     text.setDepth(2); // Ensure it's above the fish and circle
 
@@ -132,6 +139,13 @@ export class InputSystem extends System {
         circle.destroy(); // Cleanup the circle
       },
     });
+
+    
+        // Check if the game should end
+        if (this.gameStateSystem.getCorrectAnswers() >= 10) {
+          this.scene.input.enabled = false;
+          this.endGame(); // Trigger game end
+        }
   }
 
   
@@ -163,6 +177,58 @@ export class InputSystem extends System {
         }
       }
     });
+  }
+
+  endGame() {
+    this.scene.sound.play(SOUNDS.FANFARE_SOUND);
+    this.playWelcomeEmitter();
+
+    const congratsText =  this.scene.add.bitmapText(
+      this.scene.cameras.main.centerX,
+      this.scene.cameras.main.centerY,
+      FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Congratulations!',
+      FONTS.FONT_SIZE_BIG
+    )
+      .setOrigin(0.5)
+      .setTint(0xffff00)
+      .setDepth(150);
+
+      this.scene.tweens.add({
+      targets: congratsText,
+      scale: 1.5,
+      yoyo: true,
+      duration: 1000,
+      repeat: -1,
+    });
+
+    this.scene.time.delayedCall(7000, () => {
+     // this.scene.scene.restart(); // Restart the scene
+     window.location.reload();
+    });
+  }
+
+  playWelcomeEmitter() {
+    /*this.scene.emitterParticles = this.scene.add.particles(0, 0, IMAGES.BUBBLES, {
+      x: { min: 0, max: this.scene.scale.width },
+      y: { min: 0, max: this.scene.scale.height },
+      speed: 50,
+      lifespan: 2000,
+      scale: { start: 1, end: 0 },
+      quantity: 50,
+    }).setAlpha(0.6);*/
+
+    this.scene.emitterParticles = this.scene.add.particles(0, 0, IMAGES.BUBBLES, {
+      x: { min: 0, max: this.scene.scale.width },
+      y: { min: 0, max: this.scene.scale.height },
+      speed: 200,
+      lifespan: 2000,
+      scale: { start: 0.5, end: 0 },
+      quantity: 50,
+  }).setAlpha(0.6);
+
+    // Start the emitter
+    //this.scene.emitterParticles.start();
   }
 
   update(): void { }

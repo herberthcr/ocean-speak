@@ -41,7 +41,9 @@ export const SCENES = {
 export const SOUNDS = {
     OCEAN_WAVES: 'ocean_waves',
     CORRECT_SOUND: 'correct_sound',
-    INCORRECT_SOUND: 'incorrect_sound'
+    INCORRECT_SOUND: 'incorrect_sound',
+    FANFARE_SOUND: 'fanfare_sound'
+    
 };
 
 export const ROLES = {

@@ -105,10 +105,10 @@ export class MenuScene extends Scene {
         break;
 
       case MENU_STATES.DIFFICULTY_SELECTION:
-        if (!this.stateDone) {
-          this.setAllTextInvisible();
+       // if (!this.stateDone) {
+         // this.setAllTextInvisible();
           this.enterTeacherSetup();
-        }
+        //}
         break;
 
       case MENU_STATES.SESSION_MODE:
@@ -140,7 +140,7 @@ export class MenuScene extends Scene {
     }).setAlpha(0.2);
 
     // Start the emitter
-    this.menuParticles.start();
+  //  this.menuParticles.start();
   }
 
   createBackgrounds() {
@@ -254,6 +254,7 @@ export class MenuScene extends Scene {
 
     this.AddTextEffect(this.nameTextObject);
     this.addTextToArray(this.nameTextObject);
+    this.stateDone = true;
   }
 
   // Teacher setup process
@@ -322,7 +323,7 @@ export class MenuScene extends Scene {
     const difficulty = DIFFICULTY.EASY;
     this.cameras.main.once('camerafadeoutcomplete', () => {
       // Switch to the main game scene
-      this.clearScene();
+      //this.clearScene();
       this.scene.start(SCENES.UNDERWATER_SCENE, { playerName, isTeacher, mode, difficulty });
     });
   }

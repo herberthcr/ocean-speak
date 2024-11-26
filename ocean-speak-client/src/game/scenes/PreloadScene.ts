@@ -40,6 +40,8 @@ export class PreloadScene extends Scene {
         this.load.audio(SOUNDS.OCEAN_WAVES, 'sounds/ocean_sound.wav');
         this.load.audio(SOUNDS.CORRECT_SOUND, 'sounds/correct_sound.mp3');
         this.load.audio(SOUNDS.INCORRECT_SOUND, 'sounds/incorrect_sound.mp3');
+        this.load.audio(SOUNDS.FANFARE_SOUND, 'sounds/fanfare.wav');
+        
 
     }
 

@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
 import { AnimationSystem } from '../systems/AnimationSystem';
 import { RenderingSystem } from '../systems/RenderingSystem';
+import { GameStateSystem } from '../systems/GameStateSystem';
 import { UnderWaterObjectManager } from '../managers/UnderWaterObjectManager';
 import { InputSystem } from '../systems/InputSystem';
 import { ECSWorld } from '../ecs/ECSWorld';
@@ -22,6 +23,11 @@ export class UnderWaterScene extends Scene {
   private playerType: string;
   private gameMode: string;
   private difficulty: string;
+  private gameStateSystem: GameStateSystem;
+  private inputSystem: InputSystem
+  private emitterParticles!: Phaser.GameObjects.Particles.ParticleEmitterManager;
+  correctAnswersText: Phaser.GameObjects.BitmapText; // To display correct answers
+  correctAnswers: number = 0; // Counter for correct answers
 
 
   constructor() {
@@ -39,6 +45,12 @@ export class UnderWaterScene extends Scene {
 
   create(): void {
 
+
+    // Add the correct answers text in the top-left corner
+    this.correctAnswersText = this.add.bitmapText(10, 10, FONTS.FONTS_KEYS.PIXEL_FONT, 'Correct: 0', 24);
+    this.correctAnswersText.setDepth(10); // Ensure it renders above other elements
+    this.correctAnswersText.setScrollFactor(0); // Keep it fixed in the corner
+
     this.nameTextObject = this.add.bitmapText(SCREEN.WIDTH / 1.4, SCREEN.HEIGHT / 1, FONTS.FONTS_KEYS.PIXEL_FONT,
       `${this.playerType}: ${this.playerName} `, FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
       this.nameTextObject.setTint(0xa587c9);
@@ -48,6 +60,12 @@ export class UnderWaterScene extends Scene {
     this.input.enabled = true; // Re-enable input
     // Initialize the ECS World
     this.world = new ECSWorld();
+
+    // Initialize game state system
+    this.gameStateSystem = new GameStateSystem();
+
+    // Initialize input system
+     this.inputSystem = new InputSystem(this, this.world, this.gameStateSystem );
 
     // Create renderingSystem system for backgrounds, shaders, emitters and layers
     this.renderingSystem = new RenderingSystem(this, this.world);
@@ -67,7 +85,7 @@ export class UnderWaterScene extends Scene {
     // Create input system and add to the world
     const stateEntity = this.world.createEntity();
     this.world.addComponent(stateEntity, 'state', { phase: 'gameplay' });
-    this.world.addSystem(new InputSystem(this, this.world));
+    this.world.addSystem(this.inputSystem);
 
     // Create animation system and add to the world
     this.world.addSystem(new AnimationSystem(this, this.world));
