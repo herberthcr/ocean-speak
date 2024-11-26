@@ -4,7 +4,6 @@ import { ECSWorld } from '../ecs/ECSWorld';
 import { System } from './System';
 import { Position } from '../components/Position';
 import { Velocity } from '../components/Velocity';
-import { Size } from '../components/Size';
 import { GameObjectComponent } from '../components/GameObjectComponent';
 import { UnderWaterScene } from '../scenes/UnderWaterScene';
 import { SCREEN } from '../global/Constants';
@@ -26,89 +25,125 @@ export class AnimationSystem extends System {
       const gameObject = this.world.getComponent<GameObjectComponent>(entityId, 'gameObject');
 
       // Handle fish movement (existing logic)
-      if (gameObject.type === 'fish' && gameObject.grouped ===false) {
+      if (gameObject.type === 'fish' && gameObject.grouped === false) {
         this.updateIndividualFish(gameObject, position, velocity, entityId, bounds, delta);
       }
       // Handle fish movement (existing logic)
       if (gameObject.type === 'fish' && gameObject.grouped) {
-          this.updateFishBank( delta);
+        this.updateFishBank(delta);
       }
       // Handle plant swaying
       if (gameObject.type === 'plant') {
         this.updatePlants(gameObject, position);
       }
-    
+
     }
   }
 
-  updateIndividualFish (gameObject : GameObjectComponent, position: Position, velocity: Velocity, entityId: any, bounds: DOMRect, delta:number){
-      // Move the fish based on velocity and speed (constant speed)
-      position.x += velocity.vx * delta/100 * velocity.speed * 0.001;
-      position.y += velocity.vy * delta/100 * velocity.speed * 0.001;
+  updateIndividualFish(
+    gameObject: GameObjectComponent,
+    position: Position,
+    velocity: Velocity,
+    entityId: any,
+    bounds: DOMRect,
+    delta: number
+  ) {
+    // Skip collision logic if disabled
+    if (velocity.disabled) {
+      position.x += velocity.vx * delta * 0.001;
+      position.y += velocity.vy * delta * 0.001;
 
-      // Always update rotation based on the current velocity
-      this.updateRotation(gameObject.sprite, velocity);
-      
-      // Check screen bounds and reverse velocity if necessary
-      if (position.x <= 0 || position.x >= bounds.width) {
-        velocity.vx *= -1; // Reverse direction horizontally
-      }
-
-      if (position.y <= 0 || position.y >=  SCREEN.WATERHEIGHT) {
-        velocity.vy *= -1; // Reverse direction vertically
-      }
-
-      // Update the sprite's position
       gameObject.sprite.setPosition(position.x, position.y);
+      this.updateRotation(gameObject.sprite, velocity); // No collision recovery needed
+      return;
+    }
 
-      // Avoid collisions by adjusting velocity gently
-      const nearbyFish = this.world.queryEntities(['position', 'velocity', 'gameObject']);
-      const MIN_DISTANCE = 30;
-      let avoidanceForceX = 0;
-      let avoidanceForceY = 0;
-      let avoidanceCount = 0;
+    // Move the fish based on velocity and speed (constant speed)
+    position.x += velocity.vx * delta / 100 * velocity.speed * 0.001;
+    position.y += velocity.vy * delta / 100 * velocity.speed * 0.001;
 
-      // Loop through nearby fishes for avoidance
-      for (const otherEntityId of nearbyFish) {
-        if (entityId !== otherEntityId) {
-          const otherPosition = this.world.getComponent<Position>(otherEntityId, 'position');
-          const distance = Phaser.Math.Distance.Between(position.x, position.y, otherPosition.x, otherPosition.y);
+    // Always update rotation based on the current velocity
+    this.updateRotation(gameObject.sprite, velocity);
 
-          if (distance < MIN_DISTANCE) {
-            const angleToOtherFish = Math.atan2(otherPosition.y - position.y, otherPosition.x - position.x);
-            const avoidanceStrength = Math.max(0, 1 - distance / MIN_DISTANCE); // Force reduces with distance
+    // Check screen bounds and reverse velocity if necessary
+    if (position.x <= 0 || position.x >= bounds.width) {
+      velocity.vx *= -1; // Reverse direction horizontally
+    }
 
-            // Apply gradual avoidance force
-            avoidanceForceX += Math.cos(angleToOtherFish) * avoidanceStrength;
-            avoidanceForceY += Math.sin(angleToOtherFish) * avoidanceStrength;
-            avoidanceCount++;
-          }
+    if (position.y <= 0 || position.y >= SCREEN.WATERHEIGHT) {
+      velocity.vy *= -1; // Reverse direction vertically
+    }
+
+    // Update the sprite's position
+    gameObject.sprite.setPosition(position.x, position.y);
+
+    // Avoid collisions by adjusting velocity gently
+    const nearbyFish = this.world.queryEntities(['position', 'velocity', 'gameObject']);
+    const MIN_DISTANCE = 30;
+    let avoidanceForceX = 0;
+    let avoidanceForceY = 0;
+    let avoidanceCount = 0;
+
+    for (const otherEntityId of nearbyFish) {
+      if (entityId !== otherEntityId) {
+        const otherPosition = this.world.getComponent<Position>(otherEntityId, 'position');
+        const distance = Phaser.Math.Distance.Between(position.x, position.y, otherPosition.x, otherPosition.y);
+
+        if (distance < MIN_DISTANCE) {
+          const angleToOtherFish = Math.atan2(otherPosition.y - position.y, otherPosition.x - position.x);
+          const avoidanceStrength = Math.max(0, 1 - distance / MIN_DISTANCE); // Force reduces with distance
+
+          // Apply gradual avoidance force
+          avoidanceForceX += Math.cos(angleToOtherFish) * avoidanceStrength;
+          avoidanceForceY += Math.sin(angleToOtherFish) * avoidanceStrength;
+          avoidanceCount++;
         }
       }
+    }
 
-      if (avoidanceCount > 0) {
-        // Average the avoidance force to prevent collision from many fish
-        avoidanceForceX /= avoidanceCount;
-        avoidanceForceY /= avoidanceCount;
+    if (avoidanceCount > 0) {
+      // Average the avoidance force to prevent collision from many fish
+      avoidanceForceX /= avoidanceCount;
+      avoidanceForceY /= avoidanceCount;
 
-        // Apply the avoidance force
-        velocity.vx += avoidanceForceX * 4; // Scaling factor for avoidance
-        velocity.vy += avoidanceForceY * 4;
+      // Apply the avoidance force
+      velocity.vx += avoidanceForceX * 4; // Scaling factor for avoidance
+      velocity.vy += avoidanceForceY * 4;
 
-        // Normalize velocity to maintain constant speed and avoid excessive acceleration
-        const magnitude = Math.sqrt(velocity.vx * velocity.vx + velocity.vy * velocity.vy);
-        if (magnitude > 0) {
-          // Normalize and apply the fish's constant speed
-          velocity.vx = (velocity.vx / magnitude) * velocity.speed;
-          velocity.vy = (velocity.vy / magnitude) * velocity.speed;
-        }
-
-        // Update rotation after avoidance
-        this.updateRotation(gameObject.sprite, velocity);
+      // Normalize velocity to maintain constant speed and avoid excessive acceleration
+      const magnitude = Math.sqrt(velocity.vx * velocity.vx + velocity.vy * velocity.vy);
+      if (magnitude > 0) {
+        // Normalize and apply the fish's constant speed
+        velocity.vx = (velocity.vx / magnitude) * velocity.speed;
+        velocity.vy = (velocity.vy / magnitude) * velocity.speed;
       }
+
+      // Update rotation after avoidance
+      this.updateRotation(gameObject.sprite, velocity);
+    }
   }
 
-  updateFishBank ( delta:number) {
+  // Helper function to update the rotation of the sprite based on velocity
+  updateRotation(sprite: Phaser.GameObjects.Sprite, velocity: Velocity): void {
+    // Calculate angle based on velocity vector
+    const angle = Math.atan2(velocity.vy, velocity.vx);
+
+    // Apply the calculated angle to the sprite's rotation (in radians)
+    sprite.rotation = angle;
+
+    // Correctly flip the sprite based on movement direction
+    if (velocity.vx < 0) {
+      // Moving left: flip both X and Y to ensure the fish faces the correct direction
+      sprite.setFlipX(false);
+      sprite.setFlipY(true);
+    } else {
+      // Moving right: reset flipping
+      sprite.setFlipX(false);
+      sprite.setFlipY(false);
+    }
+  }
+
+  updateFishBank(delta: number) {
     this.elapsedTime += delta;
 
     // Handle fish banks
@@ -129,8 +164,8 @@ export class AnimationSystem extends System {
         const velocity = this.world.getComponent<Velocity>(entityId, 'velocity');
 
         // Move the fish in the bank
-        position.x += velocity.vx * delta/600 * velocity.speed * 0.001;
-        position.y += velocity.vy * delta/600 * velocity.speed * 0.001;
+        position.x += velocity.vx * delta / 600 * velocity.speed * 0.001;
+        position.y += velocity.vy * delta / 600 * velocity.speed * 0.001;
 
         // Update sprite position
         sprite.setPosition(position.x, position.y);
@@ -140,7 +175,6 @@ export class AnimationSystem extends System {
           newDirectionX = velocity.vx * -1; // Reverse X direction
           bankDirectionChanged = true; // Mark that the bank's direction has changed
         }
-
       });
 
       // Apply the new direction to the entire bank
@@ -156,18 +190,31 @@ export class AnimationSystem extends System {
         });
       }
 
-      // Rotate all fish in the bank to face the new direction
+      // Rotate and flip all fish in the bank to face the new direction
       bankGroup.getChildren().forEach((fish) => {
         const sprite = fish as Phaser.GameObjects.Sprite;
         const entityId = this.findEntityBySprite(sprite);
         if (entityId !== null) {
           const velocity = this.world.getComponent<Velocity>(entityId, 'velocity');
-          const angle = Math.atan2(velocity.vy, velocity.vx); // Calculate rotation angle
+
+          // Calculate rotation angle
+          const angle = Math.atan2(velocity.vy, velocity.vx);
           sprite.rotation = angle; // Rotate the fish to face its movement direction
+
+          // Correctly flip the sprite based on movement direction
+          if (velocity.vx < 0) {
+            // Moving left: ensure proper flipping
+            sprite.setFlipX(false);
+            sprite.setFlipY(true);
+          } else {
+            // Moving right: reset flipping
+            sprite.setFlipX(false);
+            sprite.setFlipY(false);
+          }
         }
       });
-    });    
-}
+    });
+  }
 
 
   findEntityBySprite(sprite: Phaser.GameObjects.Sprite): number | null {
@@ -179,17 +226,10 @@ export class AnimationSystem extends System {
     return null;
   }
 
-  updatePlants (gameObject : GameObjectComponent, position: Position){
+  updatePlants(gameObject: GameObjectComponent, position: Position) {
     const swayAmount = Math.sin(this.elapsedTime * 0.002) * 5; // Gentle swaying
     gameObject.sprite.setX(position.x + swayAmount);
   }
 
-  // Helper function to update the rotation of the sprite based on velocity
-  updateRotation(sprite: Phaser.GameObjects.Sprite, velocity: Velocity): void {
-    // Calculate angle based on velocity vector
-    const angle = Math.atan2(velocity.vy, velocity.vx);
 
-    // Apply the calculated angle to the sprite's rotation (in radians)
-    sprite.rotation = angle;
-  }
 }

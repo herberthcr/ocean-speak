@@ -2,6 +2,7 @@
 import { PreloadScene } from './scenes/PreloadScene';
 import { UnderWaterScene } from './scenes/UnderWaterScene';
 import { SplashScene } from './scenes/SplashScene';
+import { MenuScene } from './scenes/MenuScene';
 
 import { AUTO, Game, Types } from 'phaser';
 
@@ -11,17 +12,17 @@ const config: Types.Core.GameConfig = {
     width: 1024,
     height: 768,
     parent: 'game-container',
-   // backgroundColor: '#028af8',
+    // backgroundColor: '#028af8',
     pixelArt: true,
     physics: {
-      // Arcarde physics plugin, manage physics simulation
-      default: 'arcade',
-      arcade: {
-      }
+        // Arcarde physics plugin, manage physics simulation
+        default: 'arcade',
+        arcade: {
+        }
     },
     //fps: { forceSetTimeOut: true, target: 60 },
     scene: [
-        PreloadScene, SplashScene, UnderWaterScene
+        PreloadScene, SplashScene, UnderWaterScene, MenuScene
     ]
 };
 

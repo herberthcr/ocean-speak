@@ -1,3 +1,3 @@
 export interface State {
-    phase: 'intro' | 'gameplay'; // The current phase of the game
-  }
+  phase: 'intro' | 'gameplay'; // The current phase of the game
+}

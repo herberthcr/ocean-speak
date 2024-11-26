@@ -2,20 +2,17 @@ import { useRef } from 'react';
 import { IRefPhaserGame, PhaserGame } from './game/PhaserGame';
 import { PreloadScene } from './game/scenes/PreloadScene';
 
-function App()
-{
+function App() {
 
     //  References to the PhaserGame component (game and scene are exposed)
     const phaserRef = useRef<IRefPhaserGame | null>(null);
 
     const playGame = () => {
 
-        if(phaserRef.current)
-        {     
+        if (phaserRef.current) {
             const scene = phaserRef.current.scene as PreloadScene;
-            
-            if (scene)
-            {
+
+            if (scene) {
                 scene.playGame();
             }
         }
