@@ -66,12 +66,12 @@ export class AnimationSystem extends System {
     this.updateRotation(gameObject.sprite, velocity);
 
     // Check screen bounds and reverse velocity if necessary
-    if (position.x <= 0 || position.x >= bounds.width) {
+    if (position.x <= -75 || position.x >= bounds.width+100) {
       velocity.vx *= -1; // Reverse direction horizontally
     }
 
-    if (position.y <= 0 || position.y >= SCREEN.WATERHEIGHT) {
-      velocity.vy *= -1; // Reverse direction vertically
+    if (position.y <= -100 || position.y >= SCREEN.WATERHEIGHT) {
+      velocity.vy *= -0.8; // Reverse direction vertically
     }
 
     // Update the sprite's position
@@ -171,7 +171,7 @@ export class AnimationSystem extends System {
         sprite.setPosition(position.x, position.y);
 
         // Check for boundary collision (only for the first detected collision)
-        if (!bankDirectionChanged && (position.x <= 0 || position.x >= bounds.width)) {
+        if (!bankDirectionChanged && (position.x <= -135 || position.x >= bounds.width+135)) {
           newDirectionX = velocity.vx * -1; // Reverse X direction
           bankDirectionChanged = true; // Mark that the bank's direction has changed
         }

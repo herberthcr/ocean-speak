@@ -11,16 +11,21 @@ export class PreloadScene extends Scene {
         this.load.setPath(ASSETS);
 
         // Add backgrounds
-        this.load.image(BACKGROUNDS.OCEAN_COMPLETE, 'ocean.png');
-        this.load.image(BACKGROUNDS.OCEAN_REVERSE, 'ocean_reverse.png');
+        this.load.image(BACKGROUNDS.OCEAN_COMPLETE, 'ocean_complete.png');
+        this.load.image(BACKGROUNDS.OCEAN_REVERSE, 'ocean_reverse_complete.png');
         this.load.image(BACKGROUNDS.WATER_EFFECT, 'waterEffect.png');
         this.load.image(BACKGROUNDS.BLUE_BACKGROUND, 'bg2.png');
 
         // Add Images
         this.load.atlas(IMAGES.BUBBLES, 'bubbles.png', 'bubbles.json')
         this.load.image(IMAGES.LOGO, 'ocean-speech.png');
+        this.load.image(IMAGES.CURSOR, 'cursor.png');
+        this.load.image(IMAGES.NO_CURSOR, 'cursor_no.png');
+        
+
         // Preload tileset and spritesheet
         this.load.image(IMAGES.OCEAN_TILES, 'ocean_tiles.png'); // Path to tileset
+        this.load.spritesheet(IMAGES.MICS, 'sound_icons.png', { frameWidth: 32, frameHeight: 32 });
 
         // Add Shaders
         this.load.glsl(SHADERS.WATER_SHADER, 'shaders/waterShader.frag'); // Water ripple shader file
@@ -41,11 +46,13 @@ export class PreloadScene extends Scene {
         this.load.audio(SOUNDS.CORRECT_SOUND, 'sounds/correct_sound.mp3');
         this.load.audio(SOUNDS.INCORRECT_SOUND, 'sounds/incorrect_sound.mp3');
         this.load.audio(SOUNDS.FANFARE_SOUND, 'sounds/fanfare.wav');
-        
+        this.load.audio(SOUNDS.COUNTER_SOUND, 'sounds/counter.flac');
+        this.load.audio(SOUNDS.WOOSH_SOUND, 'sounds/woosh.mp3');
 
     }
 
     create() {
+        this.input.setDefaultCursor('url(assets/cursor.png), pointer');  // Custom cursor for student
         this.scene.start(SCENES.SPLASH_SCREEN);
     }
 }

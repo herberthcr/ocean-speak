@@ -19,7 +19,10 @@ export const IMAGES = {
     LOGO: 'logo',
     OCEAN_TILES: 'ocean_tiles',
     OCEAN_TILEMAP: 'ocean_tilemap',
-    SPRITES: 'sprites'
+    SPRITES: 'sprites',
+    MICS: 'mics',
+    CURSOR: 'cursor',
+    NO_CURSOR: 'nocursor',
 };
 
 export const MENU_STATES = {
@@ -42,8 +45,29 @@ export const SOUNDS = {
     OCEAN_WAVES: 'ocean_waves',
     CORRECT_SOUND: 'correct_sound',
     INCORRECT_SOUND: 'incorrect_sound',
-    FANFARE_SOUND: 'fanfare_sound'
-    
+    FANFARE_SOUND: 'fanfare_sound',
+    COUNTER_SOUND: 'counter_sound',
+    WOOSH_SOUND: 'woosh_sound'
+};
+
+export const WRONG_ANSWERS = {
+    TRY: 'Try Again',
+    OOPS: 'Ooops!',
+    NOT_FOUND: '404',
+    NOT_QUITE: 'Not quite!',
+    YOUCAN: 'You can do i!',
+    INCORRECT: 'Incorrect',
+    ASK: 'ASK FOR HELP!'
+};
+
+export const CORRECT_ANSWERS = {
+    CORRECT: 'Correct!',
+    YOU: 'You are the best!',
+    SUPERB: 'Superb',
+    COOL: 'Cool!',
+    INCREDIBLE: 'Incredible',
+    YEAH: 'YEAH',
+    HERO: 'You are my hero'
 };
 
 export const ROLES = {
@@ -93,7 +117,7 @@ export const PLANTS_ANIMATIONS = {
 };
 
 export const FISH = {
-    DEFAULT_FISH_COUNT: 30, // Default number of fish
+    DEFAULT_FISH_COUNT: 35, // Default number of fish
     FISH_BANK_COUNT: 3, // MAX IS 3 DUE to scatter logic
     IMAGE: IMAGES.SPRITES,
     FISH_FRAMERATE: 3,
@@ -139,7 +163,7 @@ export const FISH = {
 };
 
 export const PLANTS = {
-    COUNT: 14, // Default number of plants MAX IS 14 DUE to scatter logic
+    COUNT: 10, // Default number of plants MAX IS 14 DUE to scatter logic
     IMAGE: IMAGES.SPRITES,
     PLANTS_FRAMERATE: 2,
     SWAY_DURATION: { MIN: 1500, MAX: 2000 },
@@ -191,13 +215,44 @@ export const DIFFICULTY = {
     },
 };
 
+export const PLANT_GROWTH = {
+    SCALE_INCREMENT: 0.5, // Growth per correct answer
+    MAX_SCALE: 5.0, // Maximum scale for plants
+    MIN_SCALE: 0.5, // Minimum scale for plants
+  };
+  
+  export const GAME_RULES = {
+    MAX_SCORE: 10, // Winning condition
+    MAX_SPEECH_SCORE: 10, // Winning condition
+    MAX_PLANT_GROWTH_ACHIEVEMENT: 'Master Gardener! All Plants Fully Grown!',
+    MIN_PLANT_GROWTH_GAME_OVER: 'Plants Wilted! Game Over!',
+    ACHIEVEMENTS: {
+      FIVE_CORRECT_IN_ROW: 'Five Correct in a Row!',
+      TEN_CORRECT: 'Ten Correct Answers!',
+    },
+  };
+
 export const DEFAULT_DIFFICULTY = DIFFICULTY.MEDIUM;
+
+export const QUESTIONS = [
+    { ID: 1, QUESTION: 'Click the red fish', ANSWER: FISH_ANIMATIONS.SWIM_RED, SPEECH_ANSWER: 'RED FISH' },
+    { ID: 2, QUESTION: 'Click the blue fish', ANSWER: FISH_ANIMATIONS.SWIM_BLUE, SPEECH_ANSWER: 'BLUE FISH' },
+    { ID: 3, QUESTION: 'Click the orange fish', ANSWER: FISH_ANIMATIONS.SWIM_ORANGE, SPEECH_ANSWER: 'ORANGE FISH' },
+    { ID: 4, QUESTION: 'Click the green fish', ANSWER: FISH_ANIMATIONS.SWIM_GREEN, SPEECH_ANSWER: 'GREEN FISH' },
+    { ID: 5, QUESTION: 'Click the globe fish', ANSWER: FISH_ANIMATIONS.SWIM_GLOBE, SPEECH_ANSWER: 'GLOBE FISH' },
+    { ID: 6, QUESTION: 'Click the grey fish', ANSWER: FISH_ANIMATIONS.SWIM_GREY, SPEECH_ANSWER: 'GREY FISH' },
+    { ID: 7, QUESTION: 'Click the purple fish', ANSWER: FISH_ANIMATIONS.SWIM_PURPLE, SPEECH_ANSWER: 'PURPLE FISH' },
+    { ID: 8, QUESTION: 'Click the purple plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_PURPLE, SPEECH_ANSWER: 'PURPLE PLANT' },
+    { ID: 9, QUESTION: 'Click the green plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_GREEN, SPEECH_ANSWER: 'GREEN PLANT' },
+    { ID: 10, QUESTION: 'Click the blue plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_BLUE, SPEECH_ANSWER: 'BLUE PLANT' },
+    { ID: 11, QUESTION: 'Click the orange plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_ORANGE, SPEECH_ANSWER: 'ORANGE PLANT' },
+];
 
 export const AQUATIC_CHARACTERS = [
     // SpongeBob SquarePants Characters
-    'SpongeBob SquarePants',
+    'SpongeBob',
     'Patrick Star',
-    'Squidward Tentacles',
+    'Squidward',
     'Mr. Krabs',
     'Sandy Cheeks',
     'Plankton',
@@ -232,5 +287,13 @@ export const AQUATIC_CHARACTERS = [
     'Jabberjaw',
 
     //meme
-    'Chill Guy'
+    'Chill Guy',
+
+    //One Piece
+    'Luffy',
+    'Zoro',
+    'Sanji',
+    'Nami',
+    'Nico Robin',
+    'Jinbe',
 ];

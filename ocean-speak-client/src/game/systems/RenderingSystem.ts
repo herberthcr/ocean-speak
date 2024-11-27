@@ -25,7 +25,10 @@ export class RenderingSystem extends System {
   private parallaxLayers: ParallaxLayer[] = [];
   private parallaxSprites: ParallaxSpriteLayer[] = [];
   private shaderOverlay?: Phaser.GameObjects.Shader;
-  private particleManager!: Phaser.GameObjects.Particles.ParticleEmitterManager;
+  private smallBubbleEmitter!: Phaser.GameObjects.Particles.ParticleEmitterManager;
+  private ambientBubbleEmitter!: Phaser.GameObjects.Particles.ParticleEmitterManager;
+
+  
 
   constructor(scene: Phaser.Scene, world: ECSWorld) {
     super(world, scene);
@@ -74,7 +77,7 @@ export class RenderingSystem extends System {
 
   // Add a bubble emitter
   addBubbleEmitter(): void {
-    this.particleManager = this.scene.add.particles(100, 568, IMAGES.BUBBLES, {
+    this.smallBubbleEmitter = this.scene.add.particles(100, 568, IMAGES.BUBBLES, {
       frame: ['silverbubble'],
       scale: { min: 0.05, max: 0.5 },
       rotate: { start: 0, end: 360 },
@@ -85,15 +88,23 @@ export class RenderingSystem extends System {
     }).setAlpha(0.6);
 
     this.scene.tweens.add({
-      targets: this.particleManager,
+      targets: this.smallBubbleEmitter,
       particleX: 700,
       yoyo: true,
       repeat: -1,
       ease: 'sine.inout',
       duration: 1500
     });
-  }
 
+    this.ambientBubbleEmitter = this.scene.add.particles(0, 0, IMAGES.BUBBLES, {
+        x: { min: 0, max: this.scene.scale.width },
+        y: { min: 0, max: this.scene.scale.height },
+        speed: 50,
+        lifespan: 2000,
+        scale: { start: 0.5, end: 0 },
+        quantity: 50,
+      }).setAlpha(0.05);
+  }
 
   // Add a shader overlay
   addShader(shaderKey: string): void {

@@ -2,15 +2,18 @@ import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
 import { ECSWorld } from '../ecs/ECSWorld';
 import { InputSystem } from '../systems/InputSystem';
-import { DEFAULT_DIFFICULTY, BACKGROUNDS, SHADERS, SCENES, IMAGES, SCREEN, FONTS, MENU_STATES, SOUNDS, AQUATIC_CHARACTERS, DIFFICULTY } from '../global/Constants';
-
+import { DEFAULT_DIFFICULTY, BACKGROUNDS, SHADERS, SCENES, IMAGES, SCREEN, FONTS, MENU_STATES, 
+  SOUNDS, AQUATIC_CHARACTERS, DIFFICULTY } from '../global/Constants';
+import { Helpers } from '../global/Helpers';
 
 
 export class MenuScene extends Scene {
   private playerName: string;
+  private teacherName: string;
   private isTeacher: boolean;
   private stateDone: boolean;
   private menuParticles!: Phaser.GameObjects.Particles.ParticleEmitterManager;
+  private endParticles!: Phaser.GameObjects.Particles.ParticleEmitterManager;
   private difficulty: string = 'Easy';
   private mode: string = 'Offline';
   private keys!: any;
@@ -20,8 +23,7 @@ export class MenuScene extends Scene {
   private playerNameText: string;
   private welcomeText: string;
   private playerSelectionText: string;
-  private legendText: Phaser.GameObjects.BitmapText;
-  private nameTextObject: Phaser.GameObjects.BitmapText;
+
 
   private currentState: string;
 
@@ -29,6 +31,10 @@ export class MenuScene extends Scene {
   private textArray: Phaser.GameObjects.BitmapText[] = []; // Array to store BitmapText objects
   private welcomeBitmapText: Phaser.GameObjects.BitmapText;
   private offlineModeText: Phaser.GameObjects.BitmapText;
+  private onlineModeText: Phaser.GameObjects.BitmapText;
+  private configModeText: Phaser.GameObjects.BitmapText;
+  private legendText: Phaser.GameObjects.BitmapText;
+  private nameTextObject: Phaser.GameObjects.BitmapText;
 
   constructor() {
     super('MenuScene');
@@ -59,74 +65,39 @@ export class MenuScene extends Scene {
 
     // initial state
     this.currentState = MENU_STATES.PLAYER_TTPE;
+    this.initialSetup();
 
     EventBus.emit('current-scene-ready', this);
   }
 
   update(time: number, delta: number): void {
+    for (const key of Object.keys(this.keys)) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys[key])) {
+        if (this.playerName.length < 15) {
 
-    this.handleMenuState();
-    if (this.currentState === MENU_STATES.ENTER_NAME) {
-
-      for (const key of Object.keys(this.keys)) {
-        if (Phaser.Input.Keyboard.JustDown(this.keys[key])) {
-          if (this.playerName.length < 15) {
-
-            this.playerName += key;
-          }
+          this.playerName += key;
         }
       }
-      if (Phaser.Input.Keyboard.JustDown(this.backspace)) {
-        this.playerName = this.playerName.substring(0, this.playerName.length - 1);
-      }
-      if (Phaser.Input.Keyboard.JustDown(this.enter)) {
-        //  this.scene.start("playgame", this.playerName);
-      }
-      this.nameTextObject.setText(this.playerNameText + this.playerName);
-
     }
-
+    if (Phaser.Input.Keyboard.JustDown(this.backspace)) {
+      this.playerName = this.playerName.substring(0, this.playerName.length - 1);
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.enter)) {
+      //  this.scene.start("playgame", this.playerName);
+    }
+    this.nameTextObject.setText(this.playerNameText + this.playerName)
   }
 
-  handleMenuState() {
-    switch (this.currentState) {
-      case MENU_STATES.PLAYER_TTPE:
-        if (!this.stateDone) {
-          this.initialSetup();
-        }
-        break;
-
-      case MENU_STATES.ENTER_NAME:
-        //this.enterTeacherSetup();  
-        if (!this.stateDone) {
-          this.setAllTextInvisible();
-          this.nameSetup();
-        }
-        break;
-
-      case MENU_STATES.DIFFICULTY_SELECTION:
-       // if (!this.stateDone) {
-         // this.setAllTextInvisible();
-          this.enterTeacherSetup();
-        //}
-        break;
-
-      case MENU_STATES.SESSION_MODE:
-
-        break;
-
-      case MENU_STATES.RELAXING_SESSION:
-        if (!this.stateDone) {
-          this.stateDone = true;
-          this.currentState = MENU_STATES.PLAY_GAME;
-          this.addTextToArray(this.welcomeBitmapText);
-          this.addTextToArray(this.legendText);
-          this.addTextToArray(this.offlineModeText);
-          this.setAllTextInvisible();
-          this.goToMainGame();
-        }
-        break;
+  manageScreenTransition() {
+    this.input.enabled = false;
+    if (this.mode == 'online') {
+      this.addTextToArray(this.offlineModeText);
+    }else{
+      this.addTextToArray(this.onlineModeText);
     }
+    
+    this.setAllTextInvisible();
+    this.goToMainGame();
   }
 
   playWelcomeEmitter() {
@@ -138,9 +109,6 @@ export class MenuScene extends Scene {
       scale: { start: 0.5, end: 0 },
       quantity: 50,
     }).setAlpha(0.2);
-
-    // Start the emitter
-  //  this.menuParticles.start();
   }
 
   createBackgrounds() {
@@ -152,58 +120,47 @@ export class MenuScene extends Scene {
     this.welcomeText = `Welcome to the ocean`;
     this.playerSelectionText = `Select type of player?`;
 
-    this.welcomeBitmapText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2.5, FONTS.FONTS_KEYS.PIXEL_FONT,
+    this.welcomeBitmapText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 3, FONTS.FONTS_KEYS.PIXEL_FONT,
       this.welcomeText, FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
     this.AddTextEffect(this.welcomeBitmapText);
-    // this.addTextToArray(this.welcomeBitmapText);
+    this.addTextToArray(this.welcomeBitmapText);
 
-    const playerTypeSelection = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2, FONTS.FONTS_KEYS.PIXEL_FONT,
-      this.playerSelectionText, FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100);
-    this.AddTextEffect(playerTypeSelection);
-    this.addTextToArray(playerTypeSelection);
+    this.playerNameText = 'Enter your name:\n\n ';
+    this.nameTextObject = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2, FONTS.FONTS_KEYS.PIXEL_FONT,
+      this.playerNameText, FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100);
+    this.AddTextEffect(this.nameTextObject);
+    this.addTextToArray(this.nameTextObject);
 
-    const teacherText = this.add.bitmapText(SCREEN.WIDTH / 3, SCREEN.HEIGHT / 1.7, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'TEACHER', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
-
-    this.AddTextEffect(teacherText);
-    this.addTextToArray(teacherText);
-
-    teacherText.on('pointerdown', () => this.enterTeacherSetup());
-
-    const studentText = this.add.bitmapText(SCREEN.WIDTH / 1.5, SCREEN.HEIGHT / 1.7, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'STUDENT', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
-    this.AddTextEffect(studentText);
-    this.addTextToArray(studentText);
-
-    this.offlineModeText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.3, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Play Game', FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.offlineModeText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.6, FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Simulation Session', FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100).setInteractive();
     this.AddTextEffect(this.offlineModeText);
 
-    this.legendText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.05, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Relaxing offline mode, \n will be default \n if no values entered', FONTS.FONT_SIZE_SMALL).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.onlineModeText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.4, FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Online Session', FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.AddTextEffect(this.onlineModeText);
 
-    this.AddTextEffect(this.legendText);
+    this.configModeText = this.add.bitmapText(SCREEN.WIDTH / 1.7, 10, FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Teacher configuration', FONTS.FONT_SIZE_SMALL).setOrigin(0, 0).setDepth(100).setInteractive();
+    this.AddTextEffect(this.configModeText);
+    this.addTextToArray(this.configModeText);
 
-
-    teacherText.on('pointerdown', () => {
-      this.input.enabled = false;
-      this.isTeacher = true;
-      this.currentState = MENU_STATES.ENTER_NAME;
-      this.stateDone = false;
-    });
-
-    studentText.on('pointerdown', () => {
-      this.input.enabled = false;
-      this.isTeacher = false;
-      this.currentState = MENU_STATES.ENTER_NAME;
-      this.stateDone = false;
-    });
+    this.legendText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.05, 
+      FONTS.FONTS_KEYS.PIXEL_FONT,
+      '  Simulation mode will simulate the teacher \n\n      (Its ok to leave the name blank)', 
+      FONTS.FONT_SIZE_SMALL).setOrigin(0.5, 1).setDepth(100);
+      this.AddTextEffect(this.legendText);
+      this.addTextToArray(this.legendText);
 
     this.offlineModeText.on('pointerdown', () => {
-      this.input.enabled = false;
-      this.currentState = MENU_STATES.RELAXING_SESSION;
-      this.stateDone = false;
+      this.mode = 'offline';
+      this.manageScreenTransition();
     });
+
+    this.onlineModeText.on('pointerdown', () => {
+      this.mode = 'online';
+      this.manageScreenTransition();
+    });
+
     this.stateDone = true;
   }
 
@@ -214,7 +171,6 @@ export class MenuScene extends Scene {
 
   // Set all BitmapText objects in the array to invisible
   private setAllTextInvisible(): void {
-
     this.textArray.forEach((text) => {
       text.setVisible(false);
     });
@@ -245,95 +201,67 @@ export class MenuScene extends Scene {
     })
   }
 
-  nameSetup() {
-    this.input.enabled = true;
-    this.playerNameText = 'Enter your name:\n\n ';
-
-    this.nameTextObject = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.6, FONTS.FONTS_KEYS.PIXEL_FONT,
-      this.playerNameText, FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100);
-
-    this.AddTextEffect(this.nameTextObject);
-    this.addTextToArray(this.nameTextObject);
-    this.stateDone = true;
-  }
-
-  // Teacher setup process
-  enterTeacherSetup() {
-    const playerTypeSelection = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Enter Name ', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100);
-    this.AddTextEffect(playerTypeSelection);
-    this.addTextToArray(playerTypeSelection);
-  }
-
-  // Teacher options (difficulty, mode, name)
-  setupTeacherOptions() {
-
-    this.add.text(400, 150, 'Select Difficulty:', { fontSize: '20px', color: '#ffffff' }).setOrigin(0.5);
-
-    const difficulties = ['Easy', 'Medium', 'Hard'];
-    difficulties.forEach((level, index) => {
-      const button = this.add.text(400, 200 + index * 50, level, {
-        fontSize: '20px',
-        color: '#ffffff',
-        backgroundColor: '#007700',
-        padding: { x: 10, y: 5 },
-      }).setInteractive().setOrigin(0.5);
-
-      button.on('pointerdown', () => {
-        this.difficulty = level;
-        //     this.askGameMode();
-      });
-    });
-  }
-
-
   goToMainGame() {
 
-    console.log('CLICK, CLICK');
-    this.cameras.main.fadeOut(1000, 0, 150, 200); // Fade to black over 3 seconds
+    this.cameras.main.fadeOut(3000, 0, 150, 200); // Fade to black over 3 seconds
+
     // Gradually fade out particles
     this.tweens.add({
-      targets: this.menuParticles,
-      alpha: 0, // Gradually reduce alpha to 0
-      duration: 2000, // Fade out duration
-      onComplete: () => {
-        this.menuParticles.stop(); // Stop the emitter after fading out
-        this.menuParticles.destroy(); // Optional: Destroy the particles
-      },
+          targets: this.menuParticles,
+          alpha: 0, // Gradually reduce alpha to 0
+          duration: 2000, // Fade out duration
+          onComplete: () => {
+            this.menuParticles.stop(); // Stop the emitter after fading out
+            this.menuParticles.destroy(); // Optional: Destroy the particles
+          },
     });
 
-    // Stop the background music
-    const backgroundMusic = this.sound.get(SOUNDS.OCEAN_WAVES);
-    if (backgroundMusic) {
-      backgroundMusic.stop();
-    }
+    this.endParticles = this.add.particles(100, 568, IMAGES.BUBBLES, {
+      x: { min: 0, max: this.scale.width },
+      y: { min: 0, max: this.scale.height },
+      speed: 200,
+      lifespan: 2500,
+      scale: { start: 0.5, end: 0 },
+      quantity: 50,
+    }).setAlpha(0.6);
 
+    
     if (!this.playerName) {
-      const randomName = Phaser.Utils.Array.GetRandom(AQUATIC_CHARACTERS);
-      this.playerName = randomName;
+      const randomNamePlayerName = Phaser.Utils.Array.GetRandom(AQUATIC_CHARACTERS);
+      this.playerName = randomNamePlayerName;
     }
+    const playerName = Helpers.capitalizeFirstLetter(this.playerName); 
+    
+    this.teacherName = Phaser.Utils.Array.GetRandom(AQUATIC_CHARACTERS);
+    const teacherName = this.teacherName ;
 
-    const startGameText = this.add.bitmapText(500, 400, FONTS.FONTS_KEYS.PIXEL_FONT,
-      `Starting game for ${this.playerName}`, FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100);
-    this.AddTextEffect(startGameText);
-
-    const playerName = this.playerName;
     const isTeacher = this.isTeacher;
     const mode = 'offline';
-    const difficulty = DIFFICULTY.EASY;
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      // Switch to the main game scene
-      //this.clearScene();
-      this.scene.start(SCENES.UNDERWATER_SCENE, { playerName, isTeacher, mode, difficulty });
-    });
-  }
+    const difficulty = 'easy';
 
-  // Clear the current scene
-  clearScene() {
-    this.children.removeAll();
+    const startGameText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 3, FONTS.FONTS_KEYS.PIXEL_FONT,
+      `Starting game for `, FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
+    this.AddTextEffect(startGameText);
+    startGameText.setTint(0xc0e578);
+
+    const nameTextObject = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2.1, FONTS.FONTS_KEYS.PIXEL_FONT,
+      playerName, FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
+      this.AddTextEffect(nameTextObject);
+      nameTextObject.setTint(0xc0e578);
+
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+
+      // Switch to the main game scene
+      this.endParticles.destroy();
+      this.input.enabled = true;
+      this.scene.start(SCENES.UNDERWATER_SCENE, { playerName, isTeacher, mode, difficulty, teacherName });
+    });
   }
 
   playGame() {
     this.scene.start('UnderWaterScene');
   }
 }
+
+
+
