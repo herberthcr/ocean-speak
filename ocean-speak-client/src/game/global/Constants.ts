@@ -1,4 +1,18 @@
 // Constants.ts
+
+export const GAME_RULES = {
+    MAX_SCORE: 10, // Winning condition
+    MAX_SPEECH_SCORE: 10, // Winning condition
+    MAX_PLANT_GROWTH_ACHIEVEMENT: 'Master Gardener! All Plants Fully Grown!',
+    MIN_PLANT_GROWTH_GAME_OVER: 'Ooppps! Plants Wilted!!',
+    ACHIEVEMENTS: {
+        FIVE_INTERACTIONS_STREAK: 'Five Interactions in a Row!. You are the best!',
+        TEN_INTERACTIONS_STREAK: 'Ten Interactions Correct Answers! Osom!',
+        FIVE_SPEECH_STREAK: 'Five Speech Points streak! Amazing!',
+        TEN_SPEECH_STREAK: 'Ten Speech Points streak! You are incredible',
+    },
+};
+
 export const ASSETS = 'assets';
 
 export const TILEMAP = {
@@ -30,8 +44,8 @@ export const MENU_STATES = {
     ENTER_NAME: 'nameSelection',
     DIFFICULTY_SELECTION: 'difficultySelection',
     SESSION_MODE: 'sessionMode', // Online - Offiline
-    RELAXING_SESSION: 'relaxingMode', 
-    PLAY_GAME: 'playGame', 
+    RELAXING_SESSION: 'relaxingMode',
+    PLAY_GAME: 'playGame',
 };
 
 
@@ -97,7 +111,7 @@ export const FONTS = {
     FONTS_KEYS: {
         PIXEL_FONT: 'pixelfont'
     },
-    
+
 };
 
 export const FISH_ANIMATIONS = {
@@ -164,9 +178,10 @@ export const FISH = {
 };
 
 export const PLANTS = {
-    COUNT: 10, // Default number of plants MAX IS 14 DUE to scatter logic
+    COUNT: 10, // Default number of plants MAX IS 10 DUE to scatter logic
     IMAGE: IMAGES.SPRITES,
     PLANTS_FRAMERATE: 2,
+    PLANTS_SCALE: 1,
     SWAY_DURATION: { MIN: 1500, MAX: 2000 },
     SWAY_ANGLE: { MIN: -5, MAX: 5 },
     GROWING_SAND_HEIGHT: 190,
@@ -217,23 +232,10 @@ export const DIFFICULTY = {
 };
 
 export const PLANT_GROWTH = {
-    SCALE_INCREMENT: 0.5, // Growth per correct answer
-    MAX_SCALE: 5.0, // Maximum scale for plants
-    MIN_SCALE: 0.5, // Minimum scale for plants
-  };
-  
-  export const GAME_RULES = {
-    MAX_SCORE: 5, // Winning condition
-    MAX_SPEECH_SCORE: 5, // Winning condition
-    MAX_PLANT_GROWTH_ACHIEVEMENT: 'Master Gardener! All Plants Fully Grown!',
-    MIN_PLANT_GROWTH_GAME_OVER: 'Plants Wilted! Game Over!',
-    ACHIEVEMENTS: {
-      FIVE_INTERACTIONS_STREAK: 'Five Interactions in a Row!. You are the best ',
-      TEN_INTERACTIONS_STREAK: 'Ten Interactions Correct Answers! Gucci',
-      FIVE_SPEECH_STREAK: 'FiveSpeech Points streak! Sic!',
-      TEN_SPEECH_STREAK: 'Ten Speech Points streak! You are incredible',
-    },
-  };
+    SCALE_INCREMENT: 0.2, // Growth per correct answer
+    MAX_SCALE: 2.0, // Maximum scale for plants
+    MIN_SCALE: 0.2, // Minimum scale for plants
+};
 
 export const DEFAULT_DIFFICULTY = DIFFICULTY.MEDIUM;
 
@@ -250,6 +252,13 @@ export const QUESTIONS = [
     { ID: 10, QUESTION: 'Click the blue plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_BLUE, SPEECH_ANSWER: 'BLUE PLANT' },
     { ID: 11, QUESTION: 'Click the orange plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_ORANGE, SPEECH_ANSWER: 'ORANGE PLANT' },
 ];
+
+// Define colors for each role
+export const PLAYER_COLORS = {
+    TEACHER: 0xFF0000,  // Red for the Teacher
+    STUDENT: 0xFFFF00,  // Yellow for the Student
+    OTHER_PLAYER: 0x0000FF  // Blue for other players
+};
 
 export const AQUATIC_CHARACTERS = [
     // SpongeBob SquarePants Characters
@@ -298,5 +307,5 @@ export const AQUATIC_CHARACTERS = [
     'Sanji',
     'Nami',
     'Nico Robin',
-    'Jinbe',
+    'Jinbei',
 ];

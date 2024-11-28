@@ -3,7 +3,7 @@ import { ECSWorld } from '../ecs/ECSWorld';
 import { GameStateSystem } from './GameStateSystem';
 import { System } from './System';
 import Phaser from 'phaser';
-import { FONTS, SOUNDS, IMAGES, PLANT_GROWTH, GAME_RULES, WRONG_ANSWERS, CORRECT_ANSWERS } from '../global/Constants';
+import { FONTS, SOUNDS, IMAGES, PLANT_GROWTH, GAME_RULES, WRONG_ANSWERS, CORRECT_ANSWERS, PLANTS } from '../global/Constants';
 
 export class InputSystem extends System {
   public scene: Phaser.Scene;
@@ -49,9 +49,10 @@ export class InputSystem extends System {
       this.gameStateSystem.resetStreak();
     }
 
+
     this.checkAchievements();
     this.checkWinCondition();
-
+    debugger
     return isCorrect;
   }
   private disableCollisionTemporarily(fishEntityId: number): void {
@@ -106,9 +107,11 @@ export class InputSystem extends System {
     let allMaxSize = true;
 
     plantGroup.getChildren().forEach((plant: Phaser.GameObjects.Sprite) => {
+      
       const newScale = Math.min(plant.scale + PLANT_GROWTH.SCALE_INCREMENT, PLANT_GROWTH.MAX_SCALE);
 
       if (newScale < PLANT_GROWTH.MAX_SCALE) {
+        
         allMaxSize = false;
       }
 
@@ -119,12 +122,14 @@ export class InputSystem extends System {
       });
     });
 
-    if (allMaxSize) {
-      this.displayAchievement(GAME_RULES.MAX_PLANT_GROWTH_ACHIEVEMENT);
+    if (allMaxSize && this.gameStateSystem.getMaxPlantsGrow() <= 100) {
+      debugger
+      this.gameStateSystem.incrementMaxPlantsGrow(100);
     }
   }
 
   shrinkPlants() {
+
     const plantGroup = (this.scene as any).plantGroup as Phaser.GameObjects.Group;
     if (!plantGroup) return;
 
@@ -144,9 +149,25 @@ export class InputSystem extends System {
       });
     });
 
-    if (allMinSize) {
-      //this.endGame(false); // Game over if all plants shrink to minimum size
+    debugger
+    if (allMinSize && this.gameStateSystem.getMaxPlantsGrow() >= 0) {
+      this.gameStateSystem.incrementMinPlantsGrow(-1);
     }
+  }
+
+  resetPlants() {
+
+    const plantGroup = (this.scene as any).plantGroup as Phaser.GameObjects.Group;
+    if (!plantGroup) return;
+    plantGroup.getChildren().forEach((plant: Phaser.GameObjects.Sprite) => {
+      this.scene.tweens.add({
+        targets: plant,
+        scale: PLANTS.PLANTS_SCALE,
+        duration: 300,
+      });
+    
+     // plant.setScale(PLANTS.PLANTS_SCALE);
+    });
   }
 
   displayFeedback(target: Phaser.GameObjects.Sprite | null, isCorrect: boolean, isSpeech = false) {
@@ -211,6 +232,8 @@ export class InputSystem extends System {
   checkAchievements() {
     const interactionStreak = this.gameStateSystem.getInteractionStreak();
     const speechStreak = this.gameStateSystem.getSpeechStreak();
+    const plantsGrow = this.gameStateSystem.getMaxPlantsGrow();
+    const minplantsGrow = this.gameStateSystem.getMinPlants();
 
     // Create a list to hold the achievements
     const achievementsToDisplay: string[] = [];
@@ -227,6 +250,16 @@ export class InputSystem extends System {
     if (speechStreak === 10) {
       achievementsToDisplay.push(GAME_RULES.ACHIEVEMENTS.TEN_SPEECH_STREAK);
     }
+    if (plantsGrow === 100) {
+      debugger
+      this.gameStateSystem.incrementMaxPlantsGrow(101);
+      achievementsToDisplay.push(GAME_RULES.MAX_PLANT_GROWTH_ACHIEVEMENT);
+    }
+    if (minplantsGrow === -1) {
+      this.gameStateSystem.incrementMinPlantsGrow(-2);
+      achievementsToDisplay.push(GAME_RULES.MIN_PLANT_GROWTH_GAME_OVER);
+    }
+
     // Display the achievements sequentially with a delay
     this.displayAchievementsSequentially(achievementsToDisplay);
   }
@@ -260,21 +293,32 @@ export class InputSystem extends System {
     }
 
     this.scene.sound.play(SOUNDS.ACHIEVEMENT_SOUND);
-    this.playWelcomeEmitter();
 
-    this.scene.time.delayedCall(3000, () => achievementText.destroy());
+    const emitter = this.scene.add.particles(400, 250, IMAGES.BUBBLES, {
+      frame: [ 'bluebubble', 'redbubble', 'greenbubble', 'silverbubble' ],
+      lifespan: 4000,
+      speed: { min: 100, max: 150 },
+      scale: { start: 0.5, end: 0 },
+      rotate: { start: 0, end: 360 },
+      gravityY: 10,
+      blendMode: 'ADD',
+      emitting: false
+  });
+   emitter.explode(100);
+   this.scene.time.delayedCall(3000, () => achievementText.destroy());
   }
 
   checkWinCondition() {
+    debugger
     if (this.gameStateSystem.hasWon()) {
-
       this.endGame(true);
     }
   }
 
   endGame() {
     this.scene.sound.play(SOUNDS.FANFARE_SOUND);
-    this.playWelcomeEmitter();
+    this.playWinEmitter();
+    this.resetPlants();
 
     const congratsText = this.scene.add.bitmapText(
       this.scene.cameras.main.centerX,
@@ -287,39 +331,60 @@ export class InputSystem extends System {
       .setTint(0xffff00)
       .setDepth(150);
 
-    this.scene.tweens.add({
+    const congratsTween = this.scene.tweens.add({
       targets: congratsText,
       scale: 1.5,
       yoyo: true,
       duration: 1000,
       repeat: -1,
     });
-
-    this.scene.time.delayedCall(10000, () => {
-      // this.scene.scene.restart(); // Restart the scene
-      window.location.reload();
+    //this.scene.time.delayedCall(5000, () => congratsText.destroy());
+    this.scene.tweens.add({
+      targets: congratsText,
+      alpha: 0, // Gradually reduce alpha to 0
+      duration: 8000, // Fade out duration
+      onComplete: () => {
+        congratsTween.destroy();
+        congratsText.destroy(); 
+      },
     });
+    this.scene.endGame();
   }
 
-  playWelcomeEmitter() {
+  restartGame() {
+    
+  }
 
-    this.scene.emitterParticles = this.scene.add.particles(0, 0, IMAGES.BUBBLES, {
+  playWinEmitter() {
+
+    const particleEmitter = this.scene.add.particles(0, 0, IMAGES.BUBBLES, {
       frame: ['silverbubble'],
       scale: { min: 0.05, max: 1 },
       rotate: { start: 0, end: 360 },
-      speed: { min: 25, max: 50 },
+      speed: { min: 30, max: 80 },
       lifespan: 6000,
       frequency: 25,
       gravityY: 90
     }).setAlpha(0.6);
 
-    this.scene.tweens.add({
-      targets: this.scene.emitterParticles,
+    const emitterPositionTweenn = this.scene.tweens.add({
+      targets: particleEmitter,
       particleX: 700,
       yoyo: true,
       repeat: -1,
       ease: 'sine.inout',
       duration: 1500
+    });
+
+    this.scene.tweens.add({
+      targets: particleEmitter,
+      alpha: 0, // Gradually reduce alpha to 0
+      duration: 15000, // Fade out duration
+      onComplete: () => {
+        emitterPositionTweenn.destroy();
+        particleEmitter.stop(); // Stop the emitter after fading out
+        particleEmitter.destroy(); 
+      },
     });
   }
 }

@@ -38,6 +38,9 @@ export class RenderingSystem extends System {
   addParallaxLayer(imageKey: string, speed: number, depth: number, scale: number): void {
     const sprite = this.scene.add.tileSprite(0, 0, this.scene.scale.width, this.scene.scale.height, imageKey).setScale(20).setOrigin(0);
     sprite.setDepth(depth); // Set depth for background layers
+
+
+
     this.parallaxLayers.push({ imageKey, speed, sprite });
   }
 

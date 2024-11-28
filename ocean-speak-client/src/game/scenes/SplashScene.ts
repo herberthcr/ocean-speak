@@ -9,6 +9,7 @@ export class SplashScene extends Scene {
     private world: ECSWorld;
     private particles!: Phaser.GameObjects.Particles.ParticleEmitterManager;
     private backgroundMusic!: Phaser.Sound.BaseSound;
+    private sunlight: Phaser.GameObjects.Light;
 
     constructor() {
         super('SplashScene');
@@ -17,10 +18,24 @@ export class SplashScene extends Scene {
 
     create() {
         this.cameras.main.fadeIn(1000, 0, 150, 200);
-        this.add.image(0, 0, BACKGROUNDS.OCEAN_COMPLETE).setOrigin(0);
+        this.add.image(0, 0, BACKGROUNDS.OCEAN_COMPLETE).setOrigin(0).setPipeline('Light2D');;
+        this.sunlight = this.lights.addLight(this.cameras.main.centerX, 80, 100).setIntensity(3);
+        this.lights.enable().setAmbientColor(0xF4E99B);
+
+        // Create a tween for the light that moves from bottom to top (simulating sunrise)
+        this.tweens.add({
+            targets: this.sunlight,
+            y: this.cameras.main.height / 2, // Move light to the middle (simulating midday position)
+            intensity: 1, // Set full intensity (simulating midday sun)
+            duration: 12000, // Time for the sun to rise to the middle of the screen (12 seconds)
+            ease: 'Sine.inOut', // Smooth in/out ease for the motion
+            onComplete: () => {
+                this.sunset(); // After reaching midday, initiate sunset
+            },
+        });
+
         this.logo = this.add.image(512, 350, 'logo').setDepth(100).setScale(0.80);
         this.add.shader(SHADERS.TUNNEL_SHADER, 0, 0, this.scale.width, this.scale.height).setOrigin(0);
-
         // Play the background music
         if (!this.sound.get(SOUNDS.OCEAN_WAVES)) {
             this.backgroundMusic = this.sound.add(SOUNDS.OCEAN_WAVES, { loop: true });
@@ -59,6 +74,35 @@ export class SplashScene extends Scene {
                 this.particles.destroy();
                 this.scene.start(SCENES.MENU); // Switch to the main game scene
             });
+        });
+    }
+
+    // Simulate sunset by moving the light back down and lowering intensity
+    sunset(): void {
+        this.tweens.add({
+            targets: this.sunlight,
+            y: this.cameras.main.height + 100, // Move light below the screen (simulating sunset)
+            intensity: 0.1, // Lower intensity (dimming effect)
+            duration: 8000, // Time for the sun to set (8 seconds)
+            ease: 'Sine.inOut', // Smooth in/out ease for the motion
+            onComplete: () => {
+                this.sunrise(); // After sunset, initiate sunrise again
+            },
+        });
+    }
+    // Reset the sunlight position to the bottom and intensity to low (for sunrise)
+    sunrise(): void {
+        this.sunlight.y = this.cameras.main.height + 100; // Set to the bottom (below screen)
+        this.sunlight.setIntensity(0.5); // Low intensity for sunrise
+        this.tweens.add({
+            targets: this.sunlight,
+            y: this.cameras.main.height / 8, // Move to the middle (midday)
+            intensity: 1, // Full intensity (midday sun)
+            duration: 20000, // Time for the sun to rise again
+            ease: 'Sine.inOut',
+            onComplete: () => {
+                this.sunset(); // Start sunset after reaching midday
+            },
         });
     }
 

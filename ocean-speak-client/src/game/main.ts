@@ -8,7 +8,7 @@ import { AUTO, Game, Types } from 'phaser';
 
 
 const config: Types.Core.GameConfig = {
-    type: AUTO,
+    type: Phaser.AUTO,
     width: 1024,
     height: 768,
     parent: 'game-container',

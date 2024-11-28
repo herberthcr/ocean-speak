@@ -305,7 +305,7 @@ export class UnderWaterObjectManager {
 
       this.world.addComponent(entityId, 'position', position);
       this.world.addComponent(entityId, 'gameObject', gameObject);
-      this.world.addComponent(entityId, 'size', { currentSize: 1.0 }); // Initial size
+      this.world.addComponent(entityId, 'size', { currentSize: PLANTS.PLANTS_SCALE }); // Initial size
 
       // Make the plant interactive
       sprite.setInteractive({ useHandCursor: true });

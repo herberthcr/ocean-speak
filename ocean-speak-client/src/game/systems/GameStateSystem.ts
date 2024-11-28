@@ -5,6 +5,8 @@ export class GameStateSystem {
     public speechPoints: number = 0;
     private interactionStreak: number = 0;
     private speechStreak: number = 0;
+    private maxPlantsGrow: number = 0;
+    private minPlantsGrow: number = 0;
   
     incrementInteractionPoints() {
       this.interactionPoints++;
@@ -28,12 +30,31 @@ export class GameStateSystem {
     getSpeechStreak(): number {
         return this.speechStreak;
     }
+
+    getMaxPlantsGrow(): number {
+        return this.maxPlantsGrow;
+    }
+
+    incrementMaxPlantsGrow(growSize: number) {
+        this.maxPlantsGrow = growSize;
+    }
+
+    getMinPlants(): number {
+        return this.minPlantsGrow;
+    }
+
+    incrementMinPlantsGrow(growSize: number) {
+        this.minPlantsGrow = growSize;
+    }
+  
   
     resetScores() {
       this.interactionPoints = 0;
       this.speechPoints = 0;
       this.interactionStreak = 0;
       this.interactionStreak = 0;
+      this.maxPlantsGrow = 0;
+      this.minPlantsGrow = 0;
     }
   
     hasWon(): boolean {

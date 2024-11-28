@@ -48,7 +48,7 @@ export class PreloadScene extends Scene {
         this.load.audio(SOUNDS.FANFARE_SOUND, 'sounds/fanfare.wav');
         this.load.audio(SOUNDS.COUNTER_SOUND, 'sounds/counter.flac');
         this.load.audio(SOUNDS.WOOSH_SOUND, 'sounds/woosh.mp3');
-        this.load.audio(SOUNDS.ACHIEVEMENT_SOUND, 'sounds/achievement.wav');
+        this.load.audio(SOUNDS.ACHIEVEMENT_SOUND, 'sounds/achievement.mp3');
     }
 
     create() {
