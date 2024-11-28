@@ -47,7 +47,8 @@ export const SOUNDS = {
     INCORRECT_SOUND: 'incorrect_sound',
     FANFARE_SOUND: 'fanfare_sound',
     COUNTER_SOUND: 'counter_sound',
-    WOOSH_SOUND: 'woosh_sound'
+    WOOSH_SOUND: 'woosh_sound',
+    ACHIEVEMENT_SOUND: 'achievement'
 };
 
 export const WRONG_ANSWERS = {
@@ -222,13 +223,15 @@ export const PLANT_GROWTH = {
   };
   
   export const GAME_RULES = {
-    MAX_SCORE: 10, // Winning condition
-    MAX_SPEECH_SCORE: 10, // Winning condition
+    MAX_SCORE: 5, // Winning condition
+    MAX_SPEECH_SCORE: 5, // Winning condition
     MAX_PLANT_GROWTH_ACHIEVEMENT: 'Master Gardener! All Plants Fully Grown!',
     MIN_PLANT_GROWTH_GAME_OVER: 'Plants Wilted! Game Over!',
     ACHIEVEMENTS: {
-      FIVE_CORRECT_IN_ROW: 'Five Correct in a Row!',
-      TEN_CORRECT: 'Ten Correct Answers!',
+      FIVE_INTERACTIONS_STREAK: 'Five Interactions in a Row!. You are the best ',
+      TEN_INTERACTIONS_STREAK: 'Ten Interactions Correct Answers! Gucci',
+      FIVE_SPEECH_STREAK: 'FiveSpeech Points streak! Sic!',
+      TEN_SPEECH_STREAK: 'Ten Speech Points streak! You are incredible',
     },
   };
 

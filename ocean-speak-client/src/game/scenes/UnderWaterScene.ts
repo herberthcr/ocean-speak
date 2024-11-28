@@ -37,6 +37,10 @@ export class UnderWaterScene extends Scene {
   private soundIcon: Phaser.GameObjects.Sprite; // Sprite for the sound icon
   private soundIconONAnimKey: string = 'soundIconAnimON'; // Animation key for sound icon
   private soundIconOFFAnimKey: string = 'soundIconAnimOFF'; // Animation key for sound icon
+  private canClick: boolean = true;  // Flag to track if the player can click
+  private clickCooldownTime: number = 500;  // 500ms cooldown between clicks
+  private achievementOffset: number = 40;  // Vertical offset between achievements
+  private achievementY: number = 200;
 
   constructor() {
     super('UnderWaterScene');
@@ -163,6 +167,7 @@ export class UnderWaterScene extends Scene {
     // Create plants 
     this.objectManager.createPlants(this.plantGroup);
 
+
     this.teacherTurn();
 
     EventBus.emit('current-scene-ready', this);
@@ -215,8 +220,13 @@ export class UnderWaterScene extends Scene {
     this.input.setDefaultCursor('url(assets/cursor.png), pointer');  // Custom cursor for student
 
 
-    this.input.on('pointerdown', (pointer, gameObjects) => {
-      debugger
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.Sprite) => {
+      
+              // If the player is not allowed to click (during cooldown), ignore the click
+              if (!this.canClick) return;
+
+              // Set the flag to false to prevent further clicks until cooldown
+              this.canClick = false;
       const clickedObject =
         this.fishGroup.getChildren().find((obj) =>
           (obj as Phaser.GameObjects.Sprite).getBounds().contains(pointer.x, pointer.y)
@@ -243,6 +253,10 @@ export class UnderWaterScene extends Scene {
           });
         }
       }
+              // After the cooldown period, allow the next click
+              this.time.delayedCall(this.clickCooldownTime, () => {
+                this.canClick = true;  // Allow clicks again
+            });
     });
 
     // Handle speech input during the Student's Turn
@@ -332,10 +346,8 @@ export class UnderWaterScene extends Scene {
   }
 
   generateValidQuestion(): { ID: number; QUESTION: string; ANSWER: string; SPEECH_ANSWER: string } {
-    debugger
     // Filter out invalid questions where the corresponding fish/plant hasn't been created
     const validQuestions = QUESTIONS.filter(question => {
-      debugger
         if (question.ANSWER.includes('Fish')) {
             return this.objectManager.hasFish(question.ANSWER);  // Check if the corresponding fish exists
         } else if (question.ANSWER.includes('Plant')) {

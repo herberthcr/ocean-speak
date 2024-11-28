@@ -3,34 +3,41 @@ import {GAME_RULES } from '../global/Constants';
 export class GameStateSystem {
     public interactionPoints: number = 0;
     public speechPoints: number = 0;
-    private streak: number = 0;
+    private interactionStreak: number = 0;
+    private speechStreak: number = 0;
   
     incrementInteractionPoints() {
       this.interactionPoints++;
-      this.streak++;
+      this.interactionStreak++;
     }
   
     incrementSpeechPoints() {
       this.speechPoints++;
-      this.streak++;
+      this.speechStreak++;
     }
   
     resetStreak() {
-      this.streak = 0;
+      this.interactionStreak = 0;
+      this.speechStreak = 0;
     }
   
-    getStreak(): number {
-      return this.streak;
+    getInteractionStreak(): number {
+      return this.interactionStreak;
+    }
+
+    getSpeechStreak(): number {
+        return this.speechStreak;
     }
   
     resetScores() {
       this.interactionPoints = 0;
       this.speechPoints = 0;
-      this.streak = 0;
+      this.interactionStreak = 0;
+      this.interactionStreak = 0;
     }
   
     hasWon(): boolean {
-        debugger
+        
       return this.interactionPoints >= GAME_RULES.MAX_SCORE && this.speechPoints >= GAME_RULES.MAX_SPEECH_SCORE;
     }
   }

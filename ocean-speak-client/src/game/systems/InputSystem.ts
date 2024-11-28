@@ -9,6 +9,7 @@ export class InputSystem extends System {
   public scene: Phaser.Scene;
   private gameStateSystem: GameStateSystem;
 
+
   constructor(scene: Phaser.Scene, world: ECSWorld, gameStateSystem: GameStateSystem) {
     super(world, scene);
     this.scene = scene;
@@ -24,17 +25,16 @@ export class InputSystem extends System {
 
     // Display feedback
     this.displayFeedback(clickTarget, isCorrect);
-    debugger
+
     // if (gameObject instanceof Phaser.GameObjects.Sprite) {
     // Get the entityId from the sprite's custom data
     const fishEntityId = clickTarget.getData('entityId');
 
     // Call the method to disable collision temporarily
     this.disableCollisionTemporarily(fishEntityId);
-    //}
-
 
     if (isCorrect) {
+
       this.gameStateSystem.incrementInteractionPoints();
       this.gameStateSystem.incrementSpeechPoints();
       this.scene.children.getByName('interactionScore').setText(
@@ -157,11 +157,11 @@ export class InputSystem extends System {
       x,
       y,
       FONTS.FONTS_KEYS.PIXEL_FONT,
-      
-      isCorrect ? Phaser.Math.RND.pick(Object.values(CORRECT_ANSWERS)) : Phaser.Math.RND.pick(Object.values(WRONG_ANSWERS) ),
+
+      isCorrect ? Phaser.Math.RND.pick(Object.values(CORRECT_ANSWERS)) : Phaser.Math.RND.pick(Object.values(WRONG_ANSWERS)),
       32
     ).setOrigin(0.5);
-    
+
 
     feedbackText.setTint(isCorrect ? 0xffffff : 0xff0000); // Green for correct, red for incorrect
 
@@ -209,39 +209,70 @@ export class InputSystem extends System {
 
 
   checkAchievements() {
-    const streak = this.gameStateSystem.getStreak();
-    if (streak === 5) {
-      this.displayAchievement(GAME_RULES.ACHIEVEMENTS.FIVE_CORRECT_IN_ROW);
+    const interactionStreak = this.gameStateSystem.getInteractionStreak();
+    const speechStreak = this.gameStateSystem.getSpeechStreak();
+
+    // Create a list to hold the achievements
+    const achievementsToDisplay: string[] = [];
+    if (interactionStreak === 5) {
+      achievementsToDisplay.push(GAME_RULES.ACHIEVEMENTS.FIVE_INTERACTIONS_STREAK);
     }
-    if (streak === 10) {
-      this.displayAchievement(GAME_RULES.ACHIEVEMENTS.TEN_CORRECT);
+    if (interactionStreak === 10) {
+      achievementsToDisplay.push(GAME_RULES.ACHIEVEMENTS.TEN_INTERACTIONS_STREAK);
     }
+
+    if (speechStreak === 5) {
+      achievementsToDisplay.push(GAME_RULES.ACHIEVEMENTS.FIVE_SPEECH_STREAK);
+    }
+    if (speechStreak === 10) {
+      achievementsToDisplay.push(GAME_RULES.ACHIEVEMENTS.TEN_SPEECH_STREAK);
+    }
+    // Display the achievements sequentially with a delay
+    this.displayAchievementsSequentially(achievementsToDisplay);
+  }
+
+  // Method to display achievements one at a time with a delay
+  displayAchievementsSequentially(achievements: string[]) {
+    let delay = 0;
+
+    // Iterate through the achievements array
+    achievements.forEach((achievement, index) => {
+      this.scene.time.delayedCall(delay, () => {
+        this.displayAchievement(achievement); // Display the achievement
+      });
+
+      // Increment the delay for the next achievement (e.g., 2 seconds)
+      delay += 2000;  // Adjust delay as needed (2000ms = 2 seconds)
+    });
   }
 
   displayAchievement(message: string) {
-    const achievementText = this.scene.add
-      .bitmapText(
-        this.scene.cameras.main.centerX,
-        this.scene.cameras.main.centerY / 2,
-        FONTS.FONTS_KEYS.PIXEL_FONT,
-        message,
-        32
-      )
+    // Create the achievement text (or sprite, animation, etc.)
+    const achievementText = this.scene.add.bitmapText(this.scene.cameras.main.centerX, this.scene.achievementY, FONTS.FONTS_KEYS.PIXEL_FONT, message, FONTS.FONT_SIZE_SMALL)
       .setOrigin(0.5)
-      .setTint(0xffff00)
-      .setDepth(15);
+      .setTint(0xFFFF00).setDepth(150);
+
+    // Update the y position for the next achievement (with a vertical offset)
+    this.scene.achievementY += this.scene.achievementOffset;
+
+    if (this.scene.achievementY > 500) {
+      this.scene.achievementY = 100;  // Reset back to the starting position if it exceeds a certain Y threshold
+    }
+
+    this.scene.sound.play(SOUNDS.ACHIEVEMENT_SOUND);
+    this.playWelcomeEmitter();
 
     this.scene.time.delayedCall(3000, () => achievementText.destroy());
   }
 
   checkWinCondition() {
     if (this.gameStateSystem.hasWon()) {
+
       this.endGame(true);
     }
   }
 
   endGame() {
-    console.log(this.gameStateSystem);
     this.scene.sound.play(SOUNDS.FANFARE_SOUND);
     this.playWelcomeEmitter();
 
