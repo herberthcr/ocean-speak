@@ -7,7 +7,7 @@ import { UnderWaterObjectManager } from '../managers/UnderWaterObjectManager';
 import { TurnManager } from '../managers/TurnManager';
 import { InputSystem } from '../systems/InputSystem';
 import { ECSWorld } from '../ecs/ECSWorld';
-import { DEFAULT_DIFFICULTY, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, SOUNDS, SCREEN, ROLES, AQUATIC_CHARACTERS, PLAYER_COLORS } from '../global/Constants';
+import { SCREEN, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, SOUNDS, DIFFICULTY, ROLES, AQUATIC_CHARACTERS, PLAYER_COLORS } from '../global/Constants';
 import { useDebugValue } from 'react';
 
 export class UnderWaterScene extends Scene {
@@ -17,11 +17,8 @@ export class UnderWaterScene extends Scene {
   public plantGroup!: Phaser.GameObjects.Group; // Plant group
   public fishGroup!: Phaser.GameObjects.Group; // Plant group
   public fishBankGroups: Phaser.GameObjects.Group[] = []; // Array of fish bank groups
-  private selectedDifficulty = DEFAULT_DIFFICULTY; // Default difficulty
-  private nameTextObject: Phaser.GameObjects.BitmapText;
   private playerName: string;
   private teacherName: string;
-  private playerType: string;
   private gameMode: string;
   private difficulty: string;
   public gameStateSystem: GameStateSystem;
@@ -33,7 +30,6 @@ export class UnderWaterScene extends Scene {
   private currentAnswer!: string;
   private turnText!: Phaser.GameObjects.BitmapText;
   private countdownText!: Phaser.GameObjects.BitmapText;
-  //private micOpenText!: Phaser.GameObjects.BitmapText;
   private questionText!: Phaser.GameObjects.BitmapText;
   private soundIcon: Phaser.GameObjects.Sprite; // Sprite for the sound icon
   private soundIconONAnimKey: string = 'soundIconAnimON'; // Animation key for sound icon
@@ -48,17 +44,16 @@ export class UnderWaterScene extends Scene {
   private gameOver: boolean = false;  // Track if the game is over
   private interactionText!: Phaser.GameObjects.BitmapText;
   private speechPointsText!: Phaser.GameObjects.BitmapText;
-  //private light : Phaser.GameObjects.Light;
-  private spotlight: Phaser.GameObjects.Light;
+  private currentQuestionColor: string;
+  private backButton!: Phaser.GameObjects.Image;
+  private playerType: string;
 
   constructor() {
     super('UnderWaterScene');
   }
 
-
-  init(data: { playerName: string, isTeacher: boolean, mode: string, difficulty: string, teacherName: string, }) {
-
-    this.playerName = data.playerName; // Receive player name from the previous scene
+  init(data: { playerName: string, isTeacher: boolean, mode: string, difficulty: string, teacherName: string }) {
+    this.playerName = data.playerName;
     this.playerType = data.isTeacher ? ROLES.TEACHER : ROLES.STUDENT;
     this.gameMode = data.mode;
     this.difficulty = data.difficulty;
@@ -67,10 +62,95 @@ export class UnderWaterScene extends Scene {
 
   create(): void {
     this.cameras.main.fadeIn(1000, 0, 150, 200);
+    this.input.enabled = true; // Re-enable input
+
+    // Initialize the ECS World
+    this.world = new ECSWorld();
+
+    this.turnManager = new TurnManager();
+
+    // Initialize game state system
+    this.gameStateSystem = new GameStateSystem();
+
+    // Initialize input system
+    this.inputSystem = new InputSystem(this, this.world, this.gameStateSystem);
+
+    // Create renderingSystem system for backgrounds, shaders, emitters and layers
+    this.renderingSystem = new RenderingSystem(this, this.world);
+    // Add parallax background layers
+    PARALLAX.TILE_LAYERS.forEach((layer) => {
+      this.renderingSystem.addParallaxLayer(layer.imageKey, 0.1, layer.depth, 1); // Slowest layer
+    });
+    // Add sprite-based parallax layers
+    this.renderingSystem.addParallaxSprite(BACKGROUNDS.WATER_EFFECT, 50, { x: 1, y: 0 }); // Horizontal movement
+    // Add a bubble emitter with a tween
+    this.renderingSystem.addBubbleEmitter();
+    // Add shader overlay
+    this.renderingSystem.addShader(SHADERS.WATER_SHADER);
+
+    // Register the rendering system
+    this.world.addSystem(this.renderingSystem);
+
+    // Create input system and add to the world
+    const stateEntity = this.world.createEntity();
+    this.world.addComponent(stateEntity, 'state', { phase: 'gameplay' });
+    this.world.addSystem(this.inputSystem);
+
+    // Create animation system and add to the world
+    this.world.addSystem(new AnimationSystem(this, this.world));
+
+    // Create the plant group and store it in the scene
+    this.fishGroup = this.add.group(); // Create fish group
+    this.plantGroup = this.add.group(); // Create plant group
+
+    // Create the object underwater manager used to create the game objects, passing the difficulty configuration
+    this.objectManager = new UnderWaterObjectManager(this, this.world, DIFFICULTY[this.difficulty.toUpperCase()]);
+
+    // Creat Animations
+    this.objectManager.createFishAnimations();
+    this.objectManager.createPlantsAnimations();
+    // Add random fishes
+    this.objectManager.createRandomFishes(this.fishGroup); // Pass fishGroup here
+    // Add fish and fish banks
+    this.objectManager.createFishBanks(this.fishBankGroups, this.fishGroup);
+    // Create plants 
+    this.objectManager.createPlants(this.plantGroup);
+
+    this.createInteractiveComponents();
+
+    if (this.gameMode === 'solo') {
+      this.startSoloMode();
+    }
+    else if (this.gameMode === 'simulation') {
+      this.teacherTurn();
+    }
+    else {
+      // ONLINE COMING SOON
+      this.teacherTurn();
+    }
+
+
+
+    EventBus.emit('current-scene-ready', this);
+  }
+
+  update(time: number, delta: number): void {
+    this.world.update(delta);
+  }
+
+  createInteractiveComponents() {
 
     // Add UI
-    this.interactionText = this.add.bitmapText(20, 20, FONTS.FONTS_KEYS.PIXEL_FONT, 'Interaction: 0', 24).setName('interactionScore').setDepth(300).setTint(0xFFFF00);
-    this.speechPointsText = this.add.bitmapText(20, 50, FONTS.FONTS_KEYS.PIXEL_FONT, 'Speech: 0', 24).setName('speechScore').setDepth(300).setTint(0xFFFF00);
+    this.interactionText = this.add.bitmapText(20, 35, FONTS.FONTS_KEYS.PIXEL_FONT, 'Interaction: 0', 24)
+      .setName('interactionScore')
+      //.setTint(0xFFFF00)
+      .setDepth(300);
+
+    this.speechPointsText = this.add.bitmapText(20, 65, FONTS.FONTS_KEYS.PIXEL_FONT, 'Speech: 0', 24)
+      .setName('speechScore')
+      //.setTint(0xFFFF00)
+      .setDepth(300);
+
     this.questionText = this.add
       .bitmapText(this.cameras.main.centerX, 700, FONTS.FONTS_KEYS.PIXEL_FONT, '', 24)
       .setOrigin(0.5)
@@ -124,86 +204,32 @@ export class UnderWaterScene extends Scene {
       repeat: -1, // -1: infinity
       yoyo: false
     });
+    this.backButton = this.add.image(SCREEN.WIDTH - 20, SCREEN.HEIGHT - 20, IMAGES.BACK)
+      .setOrigin(1)
+      .setScale(2)
+      .setDepth(100)
+      .setInteractive();
 
-    this.input.enabled = true; // Re-enable input
-    // Initialize the ECS World
-    this.world = new ECSWorld();
-
-    this.turnManager = new TurnManager();
-
-    // Initialize game state system
-    this.gameStateSystem = new GameStateSystem();
-
-    // Initialize input system
-    this.inputSystem = new InputSystem(this, this.world, this.gameStateSystem);
-
-    // Create renderingSystem system for backgrounds, shaders, emitters and layers
-    this.renderingSystem = new RenderingSystem(this, this.world);
-    // Add parallax background layers
-    PARALLAX.TILE_LAYERS.forEach((layer) => {
-      this.renderingSystem.addParallaxLayer(layer.imageKey, 0.1, layer.depth, 1); // Slowest layer
+    this.add.tween({
+      targets: this.backButton,
+      scaleX: 2.1,
+      scaleY: 2.1,
+      ease: "Bounce", // 'Cubic', 'Elastic', 'Bounce', 'Back'
+      duration: 1500,
+      repeat: -1, // -1: infinity
+      yoyo: false
     });
-    // Add sprite-based parallax layers
-    this.renderingSystem.addParallaxSprite(BACKGROUNDS.WATER_EFFECT, 50, { x: 1, y: 0 }); // Horizontal movement
-    // Add a bubble emitter with a tween
-    this.renderingSystem.addBubbleEmitter();
-    // Add shader overlay
-    this.renderingSystem.addShader(SHADERS.WATER_SHADER);
-    
-    // Register the rendering system
-    this.world.addSystem(this.renderingSystem);
 
-    // Create input system and add to the world
-    const stateEntity = this.world.createEntity();
-    this.world.addComponent(stateEntity, 'state', { phase: 'gameplay' });
-    this.world.addSystem(this.inputSystem);
-
-    // Create animation system and add to the world
-    this.world.addSystem(new AnimationSystem(this, this.world));
-
-    // Create the plant group and store it in the scene
-    //this.plantGroup = this.add.group();
-    this.fishGroup = this.add.group(); // Create fish group
-    this.plantGroup = this.add.group(); // Create plant group
-
-    // Create the object underwater manager used to create the game objects
-    this.objectManager = new UnderWaterObjectManager(this, this.world, this.selectedDifficulty);
-
-    // Initialize the Object Manager
-    //this.objectManager = new UnderWaterObjectManager(this, this.world, DIFFICULTY.EASY);
-
-    // Creat Animations
-    this.objectManager.createFishAnimations();
-    this.objectManager.createPlantsAnimations();
-    // Add random fishes
-    this.objectManager.createRandomFishes(this.fishGroup); // Pass fishGroup here
-    // Add fish and fish banks
-    this.objectManager.createFishBanks(this.fishBankGroups, this.fishGroup);
-    // Create plants 
-    this.objectManager.createPlants(this.plantGroup);
-
-
-       this.startSoloMode();  // Skip teacher's turn and start solo mode
-    /*
-
-    if (this.gameMode === 'solo') {
-      this.startSoloMode();  // Skip teacher's turn and start solo mode
-    } else {
-      this.teacherTurn(); // Regular flow
-    }*/
-
-    EventBus.emit('current-scene-ready', this);
-  }
-
-  update(time: number, delta: number): void {
-    this.world.update(delta);
-    //const deltaInSeconds = delta / 1000;
+    this.backButton.on(Phaser.Input.Events.POINTER_UP, () => {
+      window.location.reload();
+    })
   }
 
   startSoloMode(): void {
     // In solo mode, skip teacher turn and directly start the student's turn.
     this.updateTurnText(`Student: ${this.playerName} Turn`);
     this.updateWaitingMessage(`Waiting for ${this.playerName} to answer...`, 'student');
+    this.turnText.setTint(PLAYER_COLORS.STUDENT);
     this.showQuestionAndHandleInput();
   }
 
@@ -211,8 +237,12 @@ export class UnderWaterScene extends Scene {
     if (this.gameOver) return; // Stop if game is over
     // Show a valid question for the student
     const questionData = this.generateValidQuestion();
+    this.soundIcon.anims.play(this.soundIconONAnimKey);
     this.currentAnswer = questionData.ANSWER;
+    this.currentQuestionColor = questionData.COLOR;
     this.questionText.setText(`${questionData.QUESTION} - SPEAK: ${questionData.SPEECH_ANSWER}`);
+    const colorNumber = parseInt(this.currentQuestionColor.replace("#", ""), 16);
+    this.questionText.setTint(colorNumber);  // Apply the color as tint
     this.questionText.setVisible(true);
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.Sprite) => {
@@ -230,16 +260,9 @@ export class UnderWaterScene extends Scene {
       if (clickedObject) {
         const isCorrect = this.inputSystem.handleInteraction(clickedObject as Phaser.GameObjects.Sprite, this.currentAnswer, gameObjects);
         if (isCorrect) {
-         /* this.correctAnswers++;
-          if (this.correctAnswers >= this.maxCorrectAnswers) {
-            this.endGame();  // End game after reaching max correct answers
-          } else {
-            this.showQuestionAndHandleInput();  // Show the next question
-          }*/
-            this.showQuestionAndHandleInput();  // Show the next question
+          this.showQuestionAndHandleInput();  // Show the next question
         }
       }
-
       this.time.delayedCall(this.clickCooldownTime, () => {
         this.canClick = true;
       });
@@ -257,9 +280,11 @@ export class UnderWaterScene extends Scene {
     this.announceTurn(`Teacher ${this.teacherName} Turn `, () => {
       this.time.delayedCall(2000, () => {
         const questionData = this.generateValidQuestion();
-
+        this.currentQuestionColor = questionData.COLOR;
         this.currentAnswer = questionData.ANSWER;
         this.questionText.setText(`${questionData.QUESTION} - SPEAK: ${questionData.SPEECH_ANSWER}`);
+        const colorNumber = parseInt(this.currentQuestionColor.replace("#", ""), 16);
+        this.questionText.setTint(colorNumber);  // Apply the color as tint
         this.questionText.setVisible(true);
 
         // Switch to Student's Turn
@@ -353,9 +378,11 @@ export class UnderWaterScene extends Scene {
     const tickSound = this.sound.add(SOUNDS.COUNTER_SOUND);
     tickSound.play();
 
+    const colorNumber = parseInt(this.currentQuestionColor.replace("#", ""), 16);
+    this.questionText.setTint(colorNumber);  // Apply the color as tint
     const questionNotification = this.add.bitmapText(this.cameras.main.centerX, this.achievementY, FONTS.FONTS_KEYS.PIXEL_FONT, this.questionText.text, FONTS.FONT_SIZE_SMALL)
       .setOrigin(0.5)
-      .setTint(PLAYER_COLORS.TEACHER)
+      .setTint(colorNumber)
       .setDepth(150);
     this.tweens.add({
       targets: questionNotification,
@@ -482,18 +509,15 @@ export class UnderWaterScene extends Scene {
     this.interactionText.setText('Interaction: 0');
     this.speechPointsText.setText('Speech: 0');
 
-/*
+
     if (this.gameMode === 'solo') {
-      this.startSoloMode();  
+      this.startSoloMode();
     } else {
-          // Reset the turn manager to the initial state (e.g., back to teacher's turn)
-    this.turnManager.switchTurn();  // Set the turn to teacher
-
-    // Start the Teacher's Turn again
-    this.teacherTurn();
-    }   */
-    this.startSoloMode();  
-
+      // Reset the turn manager to the initial state (e.g., back to teacher's turn)
+      this.turnManager.switchTurn();  // Set the turn to teacher
+      // Start the Teacher's Turn again
+      this.teacherTurn();
+    }
   }
 
   updateTurnText(turn: string): void {
@@ -524,15 +548,15 @@ export class UnderWaterScene extends Scene {
         this.countdownText.setText(turn).setVisible(true);
         this.countdownText.setTint(PLAYER_COLORS.TEACHER);
         this.turnText.setTint(PLAYER_COLORS.TEACHER);
-        this.questionText.setTint(PLAYER_COLORS.TEACHER);
+        // this.questionText.setTint(PLAYER_COLORS.TEACHER);
         break;
       case 'student':
         this.turnText.setTint(PLAYER_COLORS.STUDENT);
-        this.questionText.setTint(PLAYER_COLORS.STUDENT);
+        //    this.questionText.setTint(PLAYER_COLORS.STUDENT);
         break;
       default:
         this.turnText.setTint(PLAYER_COLORS.OTHER_PLAYER); // Blue for Other Players
-        this.questionText.setTint(PLAYER_COLORS.OTHER_PLAYER);
+        //  this.questionText.setTint(PLAYER_COLORS.OTHER_PLAYER);
         break;
     }
   }
@@ -543,7 +567,7 @@ export class UnderWaterScene extends Scene {
   }
 
   // Generate a valid question based on the current state
-  generateValidQuestion(): { ID: number; QUESTION: string; ANSWER: string; SPEECH_ANSWER: string } {
+  generateValidQuestion(): { ID: number; QUESTION: string; ANSWER: string; SPEECH_ANSWER: string; COLOR: string } {
     const validQuestions = QUESTIONS.filter((question) => {
       if (question.ANSWER.includes('Fish')) {
         return this.objectManager.hasFish(question.ANSWER);

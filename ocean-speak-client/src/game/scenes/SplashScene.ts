@@ -19,18 +19,18 @@ export class SplashScene extends Scene {
     create() {
         this.cameras.main.fadeIn(1000, 0, 150, 200);
         this.add.image(0, 0, BACKGROUNDS.OCEAN_COMPLETE).setOrigin(0).setPipeline('Light2D');;
-        this.sunlight = this.lights.addLight(this.cameras.main.centerX, 80, 100).setIntensity(3);
+        this.sunlight = this.lights.addLight(this.cameras.main.centerX / 2.5, 80, 100).setIntensity(3);
         this.lights.enable().setAmbientColor(0xF4E99B);
 
         // Create a tween for the light that moves from bottom to top (simulating sunrise)
         this.tweens.add({
             targets: this.sunlight,
-            y: this.cameras.main.height / 2, // Move light to the middle (simulating midday position)
-            intensity: 1, // Set full intensity (simulating midday sun)
-            duration: 12000, // Time for the sun to rise to the middle of the screen (12 seconds)
-            ease: 'Sine.inOut', // Smooth in/out ease for the motion
+            y: this.cameras.main.height / 2, 
+            intensity: 1, 
+            duration: 12000, 
+            ease: 'Sine.inOut', 
             onComplete: () => {
-                this.sunset(); // After reaching midday, initiate sunset
+                this.sunset(); 
             },
         });
 
@@ -82,9 +82,9 @@ export class SplashScene extends Scene {
         this.tweens.add({
             targets: this.sunlight,
             y: this.cameras.main.height + 100, // Move light below the screen (simulating sunset)
-            intensity: 0.1, // Lower intensity (dimming effect)
-            duration: 8000, // Time for the sun to set (8 seconds)
-            ease: 'Sine.inOut', // Smooth in/out ease for the motion
+            intensity: 0.1, 
+            duration: 8000, 
+            ease: 'Sine.inOut', 
             onComplete: () => {
                 this.sunrise(); // After sunset, initiate sunrise again
             },
@@ -92,13 +92,13 @@ export class SplashScene extends Scene {
     }
     // Reset the sunlight position to the bottom and intensity to low (for sunrise)
     sunrise(): void {
-        this.sunlight.y = this.cameras.main.height + 100; // Set to the bottom (below screen)
-        this.sunlight.setIntensity(0.5); // Low intensity for sunrise
+        this.sunlight.y = this.cameras.main.height + 100; 
+        this.sunlight.setIntensity(0.5); 
         this.tweens.add({
             targets: this.sunlight,
-            y: this.cameras.main.height / 8, // Move to the middle (midday)
-            intensity: 1, // Full intensity (midday sun)
-            duration: 20000, // Time for the sun to rise again
+            y: this.cameras.main.height / 8, 
+            intensity: 2, 
+            duration: 20000,
             ease: 'Sine.inOut',
             onComplete: () => {
                 this.sunset(); // Start sunset after reaching midday

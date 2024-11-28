@@ -37,17 +37,20 @@ export class InputSystem extends System {
 
       this.gameStateSystem.incrementInteractionPoints();
       this.gameStateSystem.incrementSpeechPoints();
-      this.scene.children.getByName('interactionScore').setText(
-        `Interaction: ${this.gameStateSystem.interactionPoints}`
-      );
-      this.scene.children.getByName('speechScore').setText(
-        `Speech: ${this.gameStateSystem.speechPoints}`
-      );
       this.growPlants(); // Trigger plant growth
     } else {
       this.shrinkPlants(); // Shrink plants on incorrect answer
       this.gameStateSystem.resetStreak();
+      this.gameStateSystem.reduceInteractionPoints();
+      this.gameStateSystem.reduceSpeechPoints();
     }
+
+    this.scene.children.getByName('interactionScore').setText(
+      `Interaction: ${this.gameStateSystem.interactionPoints}`
+    );
+    this.scene.children.getByName('speechScore').setText(
+      `Speech: ${this.gameStateSystem.speechPoints}`
+    );
 
 
     this.checkAchievements();
@@ -150,7 +153,7 @@ export class InputSystem extends System {
     });
 
     debugger
-    if (allMinSize && this.gameStateSystem.getMaxPlantsGrow() >= 0) {
+    if (allMinSize && this.gameStateSystem.getMinPlants() >= 0) {
       this.gameStateSystem.incrementMinPlantsGrow(-1);
     }
   }
@@ -338,7 +341,6 @@ export class InputSystem extends System {
       duration: 1000,
       repeat: -1,
     });
-    //this.scene.time.delayedCall(5000, () => congratsText.destroy());
     this.scene.tweens.add({
       targets: congratsText,
       alpha: 0, // Gradually reduce alpha to 0
@@ -351,9 +353,6 @@ export class InputSystem extends System {
     this.scene.endGame();
   }
 
-  restartGame() {
-    
-  }
 
   playWinEmitter() {
 

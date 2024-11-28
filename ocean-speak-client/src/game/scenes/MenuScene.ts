@@ -1,9 +1,9 @@
 import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
-import { ECSWorld } from '../ecs/ECSWorld';
-import { InputSystem } from '../systems/InputSystem';
-import { DEFAULT_DIFFICULTY, BACKGROUNDS, SHADERS, SCENES, IMAGES, SCREEN, FONTS, MENU_STATES, 
-  SOUNDS, AQUATIC_CHARACTERS, DIFFICULTY } from '../global/Constants';
+import {
+   BACKGROUNDS, SHADERS, SCENES, IMAGES, SCREEN, FONTS, MENU_STATES,
+  SOUNDS, AQUATIC_CHARACTERS, DIFFICULTY
+} from '../global/Constants';
 import { Helpers } from '../global/Helpers';
 
 
@@ -11,30 +11,38 @@ export class MenuScene extends Scene {
   private playerName: string;
   private teacherName: string;
   private isTeacher: boolean;
-  private stateDone: boolean;
   private menuParticles!: Phaser.GameObjects.Particles.ParticleEmitterManager;
   private endParticles!: Phaser.GameObjects.Particles.ParticleEmitterManager;
-  private difficulty: string = 'Easy';
-  private mode: string = 'Offline';
+  private difficulty: string = 'easy';
+  private mode: string = 'solo';
   private keys!: any;
   private backspace!: any;
   private enter!: any;
-  private text: Phaser.GameObjects.Text;
   private playerNameText: string;
   private welcomeText: string;
-  private playerSelectionText: string;
-
-
-  private currentState: string;
 
   // Scene text
   private textArray: Phaser.GameObjects.BitmapText[] = []; // Array to store BitmapText objects
+
+  // mode text
   private welcomeBitmapText: Phaser.GameObjects.BitmapText;
   private offlineModeText: Phaser.GameObjects.BitmapText;
   private onlineModeText: Phaser.GameObjects.BitmapText;
-  private configModeText: Phaser.GameObjects.BitmapText;
-  private legendText: Phaser.GameObjects.BitmapText;
+  private soloModeText: Phaser.GameObjects.BitmapText;
+  private gameModeText: Phaser.GameObjects.BitmapText;
   private nameTextObject: Phaser.GameObjects.BitmapText;
+  // difficulty text
+  private selectDifficultyText: Phaser.GameObjects.BitmapText;
+  private easyText: Phaser.GameObjects.BitmapText;
+  private mediumText: Phaser.GameObjects.BitmapText;
+  private hardText: Phaser.GameObjects.BitmapText;
+
+  private playGame: Phaser.GameObjects.BitmapText;
+
+  private mouseOverSound: Phaser.Sound.BaseSound;
+  private mouseClickSound: Phaser.Sound.BaseSound;
+
+
 
   constructor() {
     super('MenuScene');
@@ -62,6 +70,8 @@ export class MenuScene extends Scene {
     this.cameras.main.fadeIn(1000, 0, 150, 200);
     this.createBackgrounds();
     this.playWelcomeEmitter();
+    this.mouseOverSound = this.sound.add(SOUNDS.MOUSE_OVER_SOUND);
+    this.mouseClickSound = this.sound.add(SOUNDS.MOUSE_CLICK_SOUND);
 
     // initial state
     this.currentState = MENU_STATES.PLAYER_TTPE;
@@ -84,18 +94,13 @@ export class MenuScene extends Scene {
     }
     if (Phaser.Input.Keyboard.JustDown(this.enter)) {
       //  this.scene.start("playgame", this.playerName);
+      this.manageScreenTransition();
     }
     this.nameTextObject.setText(this.playerNameText + this.playerName)
   }
 
   manageScreenTransition() {
     this.input.enabled = false;
-    if (this.mode == 'online') {
-      this.addTextToArray(this.offlineModeText);
-    }else{
-      this.addTextToArray(this.onlineModeText);
-    }
-    
     this.setAllTextInvisible();
     this.goToMainGame();
   }
@@ -120,46 +125,127 @@ export class MenuScene extends Scene {
     this.welcomeText = `Welcome to the ocean`;
     this.playerSelectionText = `Select type of player?`;
 
-    this.welcomeBitmapText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 3, FONTS.FONTS_KEYS.PIXEL_FONT,
+    this.welcomeBitmapText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 5, FONTS.FONTS_KEYS.PIXEL_FONT,
       this.welcomeText, FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
     this.AddTextEffect(this.welcomeBitmapText);
     this.addTextToArray(this.welcomeBitmapText);
 
     this.playerNameText = 'Enter your name:\n\n ';
-    this.nameTextObject = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2, FONTS.FONTS_KEYS.PIXEL_FONT,
+    this.nameTextObject = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2.5, FONTS.FONTS_KEYS.PIXEL_FONT,
       this.playerNameText, FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100);
     this.AddTextEffect(this.nameTextObject);
     this.addTextToArray(this.nameTextObject);
 
-    this.offlineModeText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.6, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Simulation Session', FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.gameModeText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2, FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Choose Game Type', FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
+    this.AddTextEffect(this.gameModeText);
+    this.addTextToArray(this.gameModeText);
+
+    this.soloModeText = this.add.bitmapText(SCREEN.WIDTH / 2 - 250, SCREEN.HEIGHT / 1.8, FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Solo', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.AddTextEffect(this.soloModeText);
+    this.addTextToArray(this.soloModeText);
+
+    this.offlineModeText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.8, FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Simulation', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
     this.AddTextEffect(this.offlineModeText);
+    this.addTextToArray(this.offlineModeText);
 
-    this.onlineModeText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.4, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Online Session', FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.onlineModeText = this.add.bitmapText(SCREEN.WIDTH / 2 + 250, SCREEN.HEIGHT / 1.8, FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Online', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
     this.AddTextEffect(this.onlineModeText);
+    this.addTextToArray(this.onlineModeText);
 
-    this.configModeText = this.add.bitmapText(SCREEN.WIDTH / 1.7, 10, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Teacher configuration', FONTS.FONT_SIZE_SMALL).setOrigin(0, 0).setDepth(100).setInteractive();
-    this.AddTextEffect(this.configModeText);
-    this.addTextToArray(this.configModeText);
 
-    this.legendText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.05, 
-      FONTS.FONTS_KEYS.PIXEL_FONT,
-      '  Simulation mode will simulate the teacher \n\n      (Its ok to leave the name blank)', 
-      FONTS.FONT_SIZE_SMALL).setOrigin(0.5, 1).setDepth(100);
-      this.AddTextEffect(this.legendText);
-      this.addTextToArray(this.legendText);
+
+    this.selectDifficultyText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.5, FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Game Difficulty', FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
+    this.AddTextEffect(this.selectDifficultyText);
+    this.addTextToArray(this.selectDifficultyText);
+
+    this.easyText = this.add.bitmapText(SCREEN.WIDTH / 2 - 250, SCREEN.HEIGHT / 1.4, FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Easy', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.AddTextEffect(this.easyText);
+    this.addTextToArray(this.easyText);
+
+    this.mediumText = this.add.bitmapText(SCREEN.WIDTH / 2 , SCREEN.HEIGHT / 1.4, FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Medium', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.AddTextEffect(this.mediumText);
+    this.addTextToArray(this.mediumText);
+
+    this.hardText = this.add.bitmapText(SCREEN.WIDTH / 2 + 250, SCREEN.HEIGHT / 1.4, FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Hard', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.AddTextEffect(this.hardText);
+    this.addTextToArray(this.hardText);
+
+
+    this.playGame = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.1, FONTS.FONTS_KEYS.PIXEL_FONT,
+      'Play Game', FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.AddTextEffect(this.playGame);
+    this.addTextToArray(this.playGame);
+
+    this.mode = 'solo';
+    this.difficulty = 'medium';
+    this.soloModeText.setTint(0xc0e578);
+    this.mediumText.setTint(0xc0e578);
+
+    this.soloModeText.on('pointerdown', () => {
+      this.mode = 'solo';
+      this.offlineModeText.setTint(0xffffff);
+      this.onlineModeText.setTint(0xffffff);
+      this.soloModeText.setTint(0xc0e578);
+      this.mouseClickSound.play();
+    });
+
 
     this.offlineModeText.on('pointerdown', () => {
-      this.mode = 'offline';
-      this.manageScreenTransition();
+      this.mode = 'simulation';
+      this.offlineModeText.setTint(0xc0e578);
+      this.onlineModeText.setTint(0xffffff);
+      this.soloModeText.setTint(0xffffff);
+      this.mouseClickSound.play();
     });
 
     this.onlineModeText.on('pointerdown', () => {
       this.mode = 'online';
+      this.offlineModeText.setTint(0xffffff);
+      this.onlineModeText.setTint(0xc0e578);
+      this.soloModeText.setTint(0xffffff);
+      this.mouseClickSound.play();
+    });
+
+
+    this.easyText.on('pointerdown', () => {
+      this.difficulty = 'easy';
+      this.mediumText.setTint(0xffffff);
+      this.hardText.setTint(0xffffff);
+      this.easyText.setTint(0xc0e578);
+      this.mouseClickSound.play();
+    });
+
+    this.mediumText.on('pointerdown', () => {
+      this.difficulty = 'medium';
+      this.hardText.setTint(0xffffff);
+      this.mediumText.setTint(0xc0e578);
+      this.easyText.setTint(0xffffff);
+      this.mouseClickSound.play();
+    });
+
+    this.hardText.on('pointerdown', () => {
+      this.difficulty = 'hard';
+      this.mediumText.setTint(0xffffff);
+      this.hardText.setTint(0xc0e578);
+      this.easyText.setTint(0xffffff);
+      this.mouseClickSound.play();
+    });
+
+    
+
+    this.playGame.on('pointerdown', () => {
+      this.mouseClickSound.play();
       this.manageScreenTransition();
     });
+
 
     this.stateDone = true;
   }
@@ -193,12 +279,10 @@ export class MenuScene extends Scene {
       yoyo: false
     });
 
+
     text.on(Phaser.Input.Events.POINTER_OVER, () => {
-      text.setTint(0xc0e578);
-    })
-    text.on(Phaser.Input.Events.POINTER_OUT, () => {
-      text.setTint(0xffffff);
-    })
+      this.mouseOverSound.play();
+    });
   }
 
   goToMainGame() {
@@ -207,13 +291,13 @@ export class MenuScene extends Scene {
 
     // Gradually fade out particles
     this.tweens.add({
-          targets: this.menuParticles,
-          alpha: 0, // Gradually reduce alpha to 0
-          duration: 2000, // Fade out duration
-          onComplete: () => {
-            this.menuParticles.stop(); // Stop the emitter after fading out
-            this.menuParticles.destroy(); // Optional: Destroy the particles
-          },
+      targets: this.menuParticles,
+      alpha: 0, // Gradually reduce alpha to 0
+      duration: 2000, // Fade out duration
+      onComplete: () => {
+        this.menuParticles.stop(); // Stop the emitter after fading out
+        this.menuParticles.destroy(); // Optional: Destroy the particles
+      },
     });
 
     this.endParticles = this.add.particles(100, 568, IMAGES.BUBBLES, {
@@ -225,19 +309,19 @@ export class MenuScene extends Scene {
       quantity: 50,
     }).setAlpha(0.6);
 
-    
+
     if (!this.playerName) {
       const randomNamePlayerName = Phaser.Utils.Array.GetRandom(AQUATIC_CHARACTERS);
       this.playerName = randomNamePlayerName;
     }
-    const playerName = Helpers.capitalizeFirstLetter(this.playerName); 
-    
+    const playerName = Helpers.capitalizeFirstLetter(this.playerName);
+
     this.teacherName = Phaser.Utils.Array.GetRandom(AQUATIC_CHARACTERS);
-    const teacherName = this.teacherName ;
+    const teacherName = this.teacherName;
 
     const isTeacher = this.isTeacher;
-    const mode = 'offline';
-    const difficulty = 'easy';
+    const mode = this.mode;
+    const difficulty = this.difficulty;
 
     const startGameText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 3, FONTS.FONTS_KEYS.PIXEL_FONT,
       `Starting game for `, FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
@@ -246,8 +330,8 @@ export class MenuScene extends Scene {
 
     const nameTextObject = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2.1, FONTS.FONTS_KEYS.PIXEL_FONT,
       playerName, FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
-      this.AddTextEffect(nameTextObject);
-      nameTextObject.setTint(0xc0e578);
+    this.AddTextEffect(nameTextObject);
+    nameTextObject.setTint(0xc0e578);
 
     this.cameras.main.once('camerafadeoutcomplete', () => {
 
@@ -257,11 +341,6 @@ export class MenuScene extends Scene {
       this.scene.start(SCENES.UNDERWATER_SCENE, { playerName, isTeacher, mode, difficulty, teacherName });
     });
   }
-
-  playGame() {
-    this.scene.start('UnderWaterScene');
-  }
 }
-
 
 

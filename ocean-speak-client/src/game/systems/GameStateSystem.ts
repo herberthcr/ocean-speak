@@ -1,4 +1,4 @@
-import {GAME_RULES } from '../global/Constants';
+import { GAME_RULES } from '../global/Constants';
 
 export class GameStateSystem {
     public interactionPoints: number = 0;
@@ -7,24 +7,36 @@ export class GameStateSystem {
     private speechStreak: number = 0;
     private maxPlantsGrow: number = 0;
     private minPlantsGrow: number = 0;
-  
+
     incrementInteractionPoints() {
-      this.interactionPoints++;
-      this.interactionStreak++;
+        this.interactionPoints++;
+        this.interactionStreak++;
     }
-  
+
     incrementSpeechPoints() {
-      this.speechPoints++;
-      this.speechStreak++;
+        this.speechPoints++;
+        this.speechStreak++;
     }
-  
+
+    reduceSpeechPoints() {
+        if (this.speechPoints > 0) {
+            this.speechPoints--;
+        }
+    }
+
+    reduceInteractionPoints() {
+        if (this.interactionPoints > 0) {
+            this.interactionPoints--;
+        }
+    }
+
     resetStreak() {
-      this.interactionStreak = 0;
-      this.speechStreak = 0;
+        this.interactionStreak = 0;
+        this.speechStreak = 0;
     }
-  
+
     getInteractionStreak(): number {
-      return this.interactionStreak;
+        return this.interactionStreak;
     }
 
     getSpeechStreak(): number {
@@ -46,19 +58,19 @@ export class GameStateSystem {
     incrementMinPlantsGrow(growSize: number) {
         this.minPlantsGrow = growSize;
     }
-  
-  
+
+
     resetScores() {
-      this.interactionPoints = 0;
-      this.speechPoints = 0;
-      this.interactionStreak = 0;
-      this.interactionStreak = 0;
-      this.maxPlantsGrow = 0;
-      this.minPlantsGrow = 0;
+        this.interactionPoints = 0;
+        this.speechPoints = 0;
+        this.interactionStreak = 0;
+        this.interactionStreak = 0;
+        this.maxPlantsGrow = 0;
+        this.minPlantsGrow = 0;
     }
-  
+
     hasWon(): boolean {
-        
-      return this.interactionPoints >= GAME_RULES.MAX_SCORE && this.speechPoints >= GAME_RULES.MAX_SPEECH_SCORE;
+
+        return this.interactionPoints >= GAME_RULES.MAX_SCORE && this.speechPoints >= GAME_RULES.MAX_SPEECH_SCORE;
     }
-  }
+}

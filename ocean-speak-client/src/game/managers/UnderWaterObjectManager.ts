@@ -22,7 +22,10 @@ export class UnderWaterObjectManager {
     this.scene = scene;
     this.world = world;
     this.difficulty = difficulty;
+    this.fishSpeed = difficulty.FISH_BASE_SPEED;  // Adjust fish speed based on difficulty
+    debugger
   }
+
 
 
   createPlantsAnimations() {
@@ -88,7 +91,7 @@ export class UnderWaterObjectManager {
   }
 
   createRandomFishes(fishGroup: Phaser.GameObjects.Group): void {
-    for (let i = 0; i < FISH.DEFAULT_FISH_COUNT; i++) {
+    for (let i = 0; i < this.difficulty.FISH_COUNT; i++) {
       const x = Phaser.Math.Between(0, this.scene.scale.width);
       const y = Phaser.Math.Between(0, SCREEN.WATERHEIGHT);
       const vx = Phaser.Math.FloatBetween(-100, 100); // Random velocity
@@ -99,6 +102,8 @@ export class UnderWaterObjectManager {
     }
   }
 
+  
+
   createFishBanks(fishBankGroups: Phaser.GameObjects.Group[], fishGroup: Phaser.GameObjects.Group): void {
 
     const minSpacing = 45; // Minimum distance between fish in the same bank
@@ -108,7 +113,7 @@ export class UnderWaterObjectManager {
     // Shuffle the animations array to ensure random but non-repeating order
     const shuffledAnimations = Phaser.Utils.Array.Shuffle([...this.fishTypes]);
 
-    for (let i = 0; i < FISH.FISH_BANK_COUNT; i++) {
+    for (let i = 0; i < this.difficulty.FISH_BANK_COUNT; i++) {
       const bankGroup = this.scene.add.group(); // Create a Phaser group for the fish bank
       fishBankGroups.push(bankGroup);
 
@@ -117,7 +122,7 @@ export class UnderWaterObjectManager {
 
       // Random initial direction and speed for the bank
       const initialDirection = Phaser.Math.Between(-1, 1) || 1; // Random direction (-1 or 1)
-      const initialSpeed = 50; // Slower speed for banks
+      const initialSpeed = this.fishSpeed; // Slower speed for banks
 
       // Generate a valid central position for the bank
       let centerX = 0, centerY = 0;
@@ -209,7 +214,7 @@ export class UnderWaterObjectManager {
     const sprite = this.scene.add.sprite(x, y, 'sprites').play(_animationKey).setDepth(10);
     const gameObject: GameObjectComponent = { sprite, type: 'fish', grouped: false };
     const position: Position = { x, y };
-    const speed = Phaser.Math.Between(50, 100); // Random speed for each fish
+    const speed = Phaser.Math.Between(25, 50) + this.fishSpeed; // Random speed for each fish
     const velocity: Velocity = { vx, vy, speed };
 
     // Assign a name to the sprite
@@ -275,7 +280,7 @@ export class UnderWaterObjectManager {
   createPlants(plantGroup: Phaser.GameObjects.Group): void {
     const positions: { x: number; y: number }[] = []; // Keep track of placed positions
 
-    for (let i = 0; i < PLANTS.COUNT; i++) {
+    for (let i = 0; i < this.difficulty.PLANT_COUNT; i++) {
       let x = 0, y = 0;
       let validPosition = false;
 

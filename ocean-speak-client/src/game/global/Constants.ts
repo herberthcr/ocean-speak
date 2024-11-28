@@ -37,6 +37,7 @@ export const IMAGES = {
     MICS: 'mics',
     CURSOR: 'cursor',
     NO_CURSOR: 'nocursor',
+    BACK: 'back'
 };
 
 export const MENU_STATES = {
@@ -62,7 +63,9 @@ export const SOUNDS = {
     FANFARE_SOUND: 'fanfare_sound',
     COUNTER_SOUND: 'counter_sound',
     WOOSH_SOUND: 'woosh_sound',
-    ACHIEVEMENT_SOUND: 'achievement'
+    ACHIEVEMENT_SOUND: 'achievement',
+    MOUSE_OVER_SOUND: 'mouse_over_sound',
+    MOUSE_CLICK_SOUND: 'mouse_click_sound'  
 };
 
 export const WRONG_ANSWERS = {
@@ -212,21 +215,24 @@ export const SCREEN = {
 
 export const DIFFICULTY = {
     EASY: {
-        FISH_COUNT: 5,
+        FISH_COUNT: 25,
+        FISH_BANK_COUNT: 1,
         PLANT_COUNT: 3,
-        FISH_BASE_SPEED: 25,
+        FISH_BASE_SPEED: 35,
         PLANT_SWAY: { MIN: 2000, MAX: 3000 },
     },
     MEDIUM: {
-        FISH_COUNT: 10,
-        PLANT_COUNT: 5,
-        FISH_BASE_SPEED: 30,
+        FISH_COUNT: 40,
+        PLANT_COUNT: 7,
+        FISH_BANK_COUNT: 2,
+        FISH_BASE_SPEED: 75,
         PLANT_SWAY: { MIN: 1500, MAX: 2500 },
     },
     HARD: {
-        FISH_COUNT: 15,
-        PLANT_COUNT: 8,
-        FISH_BASE_SPEED: 35,
+        FISH_COUNT: 75,
+        PLANT_COUNT: 10,
+        FISH_BANK_COUNT: 3,
+        FISH_BASE_SPEED: 90,
         PLANT_SWAY: { MIN: 1000, MAX: 2000 },
     },
 };
@@ -240,17 +246,17 @@ export const PLANT_GROWTH = {
 export const DEFAULT_DIFFICULTY = DIFFICULTY.MEDIUM;
 
 export const QUESTIONS = [
-    { ID: 1, QUESTION: 'Click the red fish', ANSWER: FISH_ANIMATIONS.SWIM_RED, SPEECH_ANSWER: 'RED FISH' },
-    { ID: 2, QUESTION: 'Click the blue fish', ANSWER: FISH_ANIMATIONS.SWIM_BLUE, SPEECH_ANSWER: 'BLUE FISH' },
-    { ID: 3, QUESTION: 'Click the orange fish', ANSWER: FISH_ANIMATIONS.SWIM_ORANGE, SPEECH_ANSWER: 'ORANGE FISH' },
-    { ID: 4, QUESTION: 'Click the green fish', ANSWER: FISH_ANIMATIONS.SWIM_GREEN, SPEECH_ANSWER: 'GREEN FISH' },
-    { ID: 5, QUESTION: 'Click the globe fish', ANSWER: FISH_ANIMATIONS.SWIM_GLOBE, SPEECH_ANSWER: 'GLOBE FISH' },
-    { ID: 6, QUESTION: 'Click the grey fish', ANSWER: FISH_ANIMATIONS.SWIM_GREY, SPEECH_ANSWER: 'GREY FISH' },
-    { ID: 7, QUESTION: 'Click the purple fish', ANSWER: FISH_ANIMATIONS.SWIM_PURPLE, SPEECH_ANSWER: 'PURPLE FISH' },
-    { ID: 8, QUESTION: 'Click the purple plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_PURPLE, SPEECH_ANSWER: 'PURPLE PLANT' },
-    { ID: 9, QUESTION: 'Click the green plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_GREEN, SPEECH_ANSWER: 'GREEN PLANT' },
-    { ID: 10, QUESTION: 'Click the blue plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_BLUE, SPEECH_ANSWER: 'BLUE PLANT' },
-    { ID: 11, QUESTION: 'Click the orange plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_ORANGE, SPEECH_ANSWER: 'ORANGE PLANT' },
+    { ID: 1, QUESTION: 'Click the red fish', ANSWER: FISH_ANIMATIONS.SWIM_RED, SPEECH_ANSWER: 'RED FISH', COLOR: '#FF0000' },  // Red
+    { ID: 2, QUESTION: 'Click the blue fish', ANSWER: FISH_ANIMATIONS.SWIM_BLUE, SPEECH_ANSWER: 'BLUE FISH', COLOR: '#0000FF' },  // Blue
+    { ID: 3, QUESTION: 'Click the orange fish', ANSWER: FISH_ANIMATIONS.SWIM_ORANGE, SPEECH_ANSWER: 'ORANGE FISH', COLOR: '#FF5F1F' },  // Orange
+    { ID: 4, QUESTION: 'Click the green fish', ANSWER: FISH_ANIMATIONS.SWIM_GREEN, SPEECH_ANSWER: 'GREEN FISH', COLOR: '#008000' },  // Green
+    { ID: 5, QUESTION: 'Click the globe fish', ANSWER: FISH_ANIMATIONS.SWIM_GLOBE, SPEECH_ANSWER: 'GLOBE FISH', COLOR: '#964B00' },  // Yellow
+    { ID: 6, QUESTION: 'Click the grey fish', ANSWER: FISH_ANIMATIONS.SWIM_GREY, SPEECH_ANSWER: 'GREY FISH', COLOR: '#808080' },  // Grey
+    { ID: 7, QUESTION: 'Click the purple fish', ANSWER: FISH_ANIMATIONS.SWIM_PURPLE, SPEECH_ANSWER: 'PURPLE FISH', COLOR: '#d66fe8' },  // Purple
+    { ID: 8, QUESTION: 'Click the purple plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_PURPLE, SPEECH_ANSWER: 'PURPLE PLANT', COLOR: '#d66fe8' },  // Purple
+    { ID: 9, QUESTION: 'Click the green plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_GREEN, SPEECH_ANSWER: 'GREEN PLANT', COLOR: '#008000' },  // Green
+    { ID: 10, QUESTION: 'Click the blue plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_BLUE, SPEECH_ANSWER: 'BLUE PLANT', COLOR: '#0000FF' },  // Blue
+    { ID: 11, QUESTION: 'Click the orange plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_ORANGE, SPEECH_ANSWER: 'ORANGE PLANT', COLOR: '#FF5F1F' },  // Orange
 ];
 
 // Define colors for each role

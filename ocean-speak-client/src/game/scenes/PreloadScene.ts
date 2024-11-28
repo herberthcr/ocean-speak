@@ -21,6 +21,7 @@ export class PreloadScene extends Scene {
         this.load.image(IMAGES.LOGO, 'ocean-speech.png');
         this.load.image(IMAGES.CURSOR, 'cursor.png');
         this.load.image(IMAGES.NO_CURSOR, 'cursor_no.png');
+        this.load.image(IMAGES.BACK, 'back.png');
         
 
         // Preload tileset and spritesheet
@@ -49,6 +50,9 @@ export class PreloadScene extends Scene {
         this.load.audio(SOUNDS.COUNTER_SOUND, 'sounds/counter.flac');
         this.load.audio(SOUNDS.WOOSH_SOUND, 'sounds/woosh.mp3');
         this.load.audio(SOUNDS.ACHIEVEMENT_SOUND, 'sounds/achievement.mp3');
+        this.load.audio(SOUNDS.MOUSE_OVER_SOUND, 'sounds/mouse_over_sound.wav');
+        this.load.audio(SOUNDS.MOUSE_CLICK_SOUND, 'sounds/mouse_click_sound.wav');
+        
     }
 
     create() {
