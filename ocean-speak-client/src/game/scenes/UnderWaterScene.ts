@@ -133,10 +133,13 @@ export class UnderWaterScene extends Scene {
 
     this.createInteractiveComponents();
 
+    debugger
     if (this.gameMode === 'solo') {
       this.startSoloMode();
     }
     else if (this.gameMode === 'simulation') {
+      debugger
+      this.speechRecognitionOn = 'off';
       this.teacherTurn();
     }
     else {
@@ -361,7 +364,6 @@ export class UnderWaterScene extends Scene {
     if (this.speechRecognitionOn === 'on') {
 
       this.speechPointsText.setVisible(true);
-
       this.soundIcon = this.add.sprite(850, 20, IMAGES.MICS).setOrigin(0).setScale(1.5).setDepth(250);
 
       // Add sound icon animation (from frame 1 to 3)
@@ -521,6 +523,7 @@ export class UnderWaterScene extends Scene {
     this.input.setDefaultCursor('url(assets/cursor.png), pointer');
 
     if (this.simulation) {
+      
       // Simulate the student's answer after 3 seconds
       this.simulateStudentAnswer();
     } else {
@@ -704,8 +707,9 @@ export class UnderWaterScene extends Scene {
     // Reset game state values
     this.gameOver = false;
     this.inputSystem.GameStart();
-
-    this.sendGameStateToServer();
+    if(this.gameMode === 'online'){
+      this.sendGameStateToServer();
+    }
     this.gameStateSystem.resetScores();
     this.correctAnswers = 0;  // Reset correct answers count
     this.questionText.setText('');  // Clear the question text

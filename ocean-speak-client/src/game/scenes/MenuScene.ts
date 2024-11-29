@@ -257,6 +257,7 @@ export class MenuScene extends Scene {
       this.textHelper.updateTextColor(this.offlineModeText, 'gold');
       this.textHelper.updateTextColor(this.onlineModeText, 'blue');
       this.textHelper.updateTextColor(this.soloModeText, 'blue');
+      
       this.mouseClickSound.play();
     });
 

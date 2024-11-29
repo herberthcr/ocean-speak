@@ -9,7 +9,6 @@ import { FONTS, SOUNDS, IMAGES, PLANT_GROWTH, ACHIEVEMENTS, GAME_RULES, WRONG_AN
 export class InputSystem extends System {
   public scene: Phaser.Scene;
   private gameStateSystem: GameStateSystem;
-  private speechRecognitionOn: string;
   private gameOver: boolean;
   private difficulty: string;
 
@@ -17,7 +16,6 @@ export class InputSystem extends System {
     super(world, scene);
     this.scene = scene;
     this.gameStateSystem = gameStateSystem;
-    this.speechRecognitionOn = scene.speechRecognitionOn;
     this.difficulty = scene.difficulty;
     this.gameOver = false;
   }
@@ -37,17 +35,17 @@ export class InputSystem extends System {
 
     // Call the method to disable collision temporarily
     this.disableCollisionTemporarily(fishEntityId);
-
+ debugger
     if (isCorrect) {
       this.gameStateSystem.incrementInteractionPoints();
-      this.speechRecognitionOn === 'off' && this.gameStateSystem.incrementSpeechPoints();
+      this.scene.speechRecognitionOn === 'off' && this.gameStateSystem.incrementSpeechPoints();
       this.growPlants(); // Trigger plant growth
     } else {
       this.shrinkPlants(); // Shrink plants on incorrect answer
       this.gameStateSystem.resetInteractionStreak();
       this.gameStateSystem.reduceInteractionPoints();
 
-      if (this.speechRecognitionOn === 'off') {
+      if (this.scene.speechRecognitionOn === 'off') {
         this.gameStateSystem.reduceSpeechPoints();
         this.gameStateSystem.resetInteractionStreak();
       }
@@ -252,10 +250,10 @@ export class InputSystem extends System {
     if (interactionStreak === 10) {
       achievementsToDisplay.push(ACHIEVEMENTS.TEN_INTERACTIONS_STREAK);
     }
-    if (speechStreak === 5 && this.speechRecognitionOn === 'on') {
+    if (speechStreak === 5 && this.scene.speechRecognitionOn === 'on') {
       achievementsToDisplay.push(ACHIEVEMENTS.FIVE_SPEECH_STREAK);
     }
-    if (speechStreak === 10 && this.speechRecognitionOn === 'on') {
+    if (speechStreak === 10 && this.scene.speechRecognitionOn === 'on') {
       achievementsToDisplay.push(ACHIEVEMENTS.TEN_SPEECH_STREAK);
     }
     if (plantsGrow === 100) {
