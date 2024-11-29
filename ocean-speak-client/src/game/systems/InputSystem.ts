@@ -3,14 +3,15 @@ import { ECSWorld } from '../ecs/ECSWorld';
 import { GameStateSystem } from './GameStateSystem';
 import { System } from './System';
 import Phaser from 'phaser';
+import { TextHelper } from '../global/TextHelper'
 import { FONTS, SOUNDS, IMAGES, PLANT_GROWTH, ACHIEVEMENTS, GAME_RULES, WRONG_ANSWERS, CORRECT_ANSWERS, PLANTS } from '../global/Constants';
 
 export class InputSystem extends System {
   public scene: Phaser.Scene;
   private gameStateSystem: GameStateSystem;
-  private speechRecognitionOn: string ;
-  private gameOver: boolean ;
-  private difficulty: string ;
+  private speechRecognitionOn: string;
+  private gameOver: boolean;
+  private difficulty: string;
 
   constructor(scene: Phaser.Scene, world: ECSWorld, gameStateSystem: GameStateSystem) {
     super(world, scene);
@@ -21,7 +22,6 @@ export class InputSystem extends System {
     this.gameOver = false;
   }
 
-
   handleInteraction(clickTarget: Phaser.GameObjects.Sprite, correctAnswer: string) {
     if (!clickTarget) {
       return false; // No interaction occurred
@@ -31,7 +31,6 @@ export class InputSystem extends System {
     // Display feedback
     this.displayFeedback(clickTarget, isCorrect);
 
-    // if (gameObject instanceof Phaser.GameObjects.Sprite) {
     // Get the entityId from the sprite's custom data
     const fishEntityId = clickTarget.getData('entityId');
 
@@ -47,24 +46,19 @@ export class InputSystem extends System {
       this.gameStateSystem.resetInteractionStreak();
       this.gameStateSystem.reduceInteractionPoints();
 
-      if (this.speechRecognitionOn === 'off' ) {
+      if (this.speechRecognitionOn === 'off') {
         this.gameStateSystem.reduceSpeechPoints();
         this.gameStateSystem.resetInteractionStreak();
       }
-       
+
     }
 
-    this.scene.children.getByName('interactionScore').setText(
-      `Interaction: ${this.gameStateSystem.interactionPoints}`
-    );
-    this.scene.children.getByName('speechScore').setText(
-      `Speech: ${this.gameStateSystem.speechPoints}`
-    );
-
+    this.scene.interactionText.setText(`Interaction: ${this.gameStateSystem.interactionPoints}`);
+    this.scene.speechPointsText.setText(`Speech: ${this.gameStateSystem.speechPoints}`);
 
     this.checkAchievements();
     this.checkWinCondition();
-    
+
     return isCorrect;
   }
   private disableCollisionTemporarily(fishEntityId: number): void {
@@ -90,18 +84,17 @@ export class InputSystem extends System {
     recognition.start();
 
     recognition.onresult = (event: any) => {
-      debugger
       const transcript = event.results[0][0].transcript.toLowerCase();
       let isCorrect = transcript.includes(correctAnswer.toLowerCase());
 
-      if(this.difficulty === 'easy') {isCorrect = true;}
+      if (this.difficulty === 'easy') { isCorrect = true; }
       this.displayFeedback(null, isCorrect, true); // Speech feedback
+      this.scene.speakText.setVisible(false);
+      this.scene.soundIcon.anims.play(this.scene.soundIconOFFAnimKey);
 
-      if (isCorrect) { 
+      if (isCorrect) {
         this.gameStateSystem.incrementSpeechPoints();
-        this.scene.children.getByName('speechScore').setText(
-          `Speech: ${this.gameStateSystem.speechPoints}`
-        );
+        this.scene.speechPointsText.setText(`Speech: ${this.gameStateSystem.speechPoints}`);
         this.growPlants();
       } else {
         this.shrinkPlants();
@@ -124,11 +117,11 @@ export class InputSystem extends System {
     let allMaxSize = true;
 
     plantGroup.getChildren().forEach((plant: Phaser.GameObjects.Sprite) => {
-      
+
       const newScale = Math.min(plant.scale + PLANT_GROWTH.SCALE_INCREMENT, PLANT_GROWTH.MAX_SCALE);
 
       if (newScale < PLANT_GROWTH.MAX_SCALE) {
-        
+
         allMaxSize = false;
       }
 
@@ -140,7 +133,7 @@ export class InputSystem extends System {
     });
 
     if (allMaxSize && this.gameStateSystem.getMaxPlantsGrow() <= 100) {
-      
+
       this.gameStateSystem.incrementMaxPlantsGrow(100);
     }
   }
@@ -166,7 +159,7 @@ export class InputSystem extends System {
       });
     });
 
-    
+
     if (allMinSize && this.gameStateSystem.getMinPlants() >= 0) {
       this.gameStateSystem.incrementMinPlantsGrow(-1);
     }
@@ -196,7 +189,7 @@ export class InputSystem extends System {
 
       isCorrect ? Phaser.Math.RND.pick(Object.values(CORRECT_ANSWERS)) : Phaser.Math.RND.pick(Object.values(WRONG_ANSWERS)),
       32
-    ).setOrigin(0.5);
+    ).setOrigin(0.5).setDepth(300);;
 
 
     feedbackText.setTint(isCorrect ? 0xffffff : 0xff0000); // Green for correct, red for incorrect
@@ -258,15 +251,14 @@ export class InputSystem extends System {
     if (interactionStreak === 10) {
       achievementsToDisplay.push(ACHIEVEMENTS.TEN_INTERACTIONS_STREAK);
     }
-
-    if (speechStreak === 5) {
+    if (speechStreak === 5 && this.speechRecognitionOn === 'on') {
       achievementsToDisplay.push(ACHIEVEMENTS.FIVE_SPEECH_STREAK);
     }
-    if (speechStreak === 10) {
+    if (speechStreak === 10 && this.speechRecognitionOn === 'on') {
       achievementsToDisplay.push(ACHIEVEMENTS.TEN_SPEECH_STREAK);
     }
     if (plantsGrow === 100) {
-      
+
       this.gameStateSystem.incrementMaxPlantsGrow(101);
       achievementsToDisplay.push(ACHIEVEMENTS.MAX_PLANT_GROWTH_ACHIEVEMENT);
     }
@@ -295,11 +287,9 @@ export class InputSystem extends System {
   }
 
   displayAchievement(message: string) {
-    // Create the achievement text (or sprite, animation, etc.)
-    const achievementText = this.scene.add.bitmapText(this.scene.cameras.main.centerX, this.scene.achievementY, FONTS.FONTS_KEYS.PIXEL_FONT, message, FONTS.FONT_SIZE_SMALL)
-      .setOrigin(0.5)
-      .setTint(0xFFFF00).setDepth(150);
 
+    const achievementText = this.scene.textHelper.createColoredText(this.scene.cameras.main.centerX, this.scene.achievementY, 200, '24px', message, 'yellow');
+    achievementText.setOrigin(0.5).setName('achievementText');
     // Update the y position for the next achievement (with a vertical offset)
     this.scene.achievementY += this.scene.achievementOffset;
 
@@ -310,7 +300,7 @@ export class InputSystem extends System {
     this.scene.sound.play(SOUNDS.ACHIEVEMENT_SOUND);
 
     const emitter = this.scene.add.particles(400, 250, IMAGES.BUBBLES, {
-      frame: [ 'bluebubble', 'redbubble', 'greenbubble', 'silverbubble' ],
+      frame: ['bluebubble', 'redbubble', 'greenbubble', 'silverbubble'],
       lifespan: 4000,
       speed: { min: 100, max: 150 },
       scale: { start: 0.5, end: 0 },
@@ -318,20 +308,20 @@ export class InputSystem extends System {
       gravityY: 10,
       blendMode: 'ADD',
       emitting: false
-  });
-   emitter.explode(100);
-   this.scene.time.delayedCall(3000, () => achievementText.destroy());
+    });
+    emitter.explode(100);
+    this.scene.time.delayedCall(3000, () => achievementText.destroy());
   }
 
   checkWinCondition() {
     if (this.gameStateSystem.hasWon() && !this.gameOver) {
-      debugger
+  
       this.endGame();
     }
   }
 
   GameStart() {
-    this.gameOver = true;
+    this.gameOver = false;
   }
 
 
@@ -341,16 +331,11 @@ export class InputSystem extends System {
     this.playWinEmitter();
     this.resetPlants();
 
-    const congratsText = this.scene.add.bitmapText(
+    const congratsText = this.scene.textHelper.createColoredText(
       this.scene.cameras.main.centerX,
-      this.scene.cameras.main.centerY,
-      FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Congratulations!',
-      FONTS.FONT_SIZE_BIG
-    )
-      .setOrigin(0.5)
-      .setTint(0xffff00)
-      .setDepth(150);
+      this.scene.cameras.main.centerY, 200, '72px', 'Congratulations!', 'yellow');
+    congratsText.setOrigin(0.5).
+      setName('congratsText');
 
     const congratsTween = this.scene.tweens.add({
       targets: congratsText,
@@ -365,7 +350,7 @@ export class InputSystem extends System {
       duration: 8000, // Fade out duration
       onComplete: () => {
         congratsTween.destroy();
-        congratsText.destroy(); 
+        congratsText.destroy();
       },
     });
     this.scene.endGame();
@@ -400,7 +385,7 @@ export class InputSystem extends System {
       onComplete: () => {
         emitterPositionTweenn.destroy();
         particleEmitter.stop(); // Stop the emitter after fading out
-        particleEmitter.destroy(); 
+        particleEmitter.destroy();
       },
     });
   }

@@ -23,10 +23,7 @@ export class UnderWaterObjectManager {
     this.world = world;
     this.difficulty = difficulty;
     this.fishSpeed = difficulty.FISH_BASE_SPEED;  // Adjust fish speed based on difficulty
-    
   }
-
-
 
   createPlantsAnimations() {
     // Loop through the keys of the PLANTS constant (e.g., BLUE_PLANT, PURPLE_PLANT, etc.)

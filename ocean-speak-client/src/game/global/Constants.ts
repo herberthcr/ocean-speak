@@ -106,25 +106,76 @@ export const SOUNDS = {
 };
 
 export const WRONG_ANSWERS = {
-    TRY: 'Try Again',
+    TRY: 'Try Again!',
     OOPS: 'Ooops!',
-    NOT_FOUND: '404',
+    NOT_FOUND: '404 Not Found!',
     NOT_QUITE: 'Not quite!',
-    YOUCAN: 'You can do i!',
-    INCORRECT: 'Incorrect',
-    ASK: 'ASK FOR HELP!'
-};
+    YOUCAN: 'You can do it!',
+    INCORRECT: 'Incorrect!',
+    ASK: 'Ask for help!',
+    CLOSE: 'So close!',
+    OOPSIE: 'Oopsie Daisy!',
+    ALMOST: 'Almost there!',
+    KEEP_GOING: 'Keep Going!',
+    NOT_THIS_TIME: 'Not this time!',
+    NICE_TRY: 'Nice Try!',
+    UH_OH: 'Uh-oh!',
+    HMMM: 'Hmm... Try Again!',
+    DONT_WORRY: "Don't worry!",
+    NEXT_TIME: 'Next time!',
+    YIKES: 'Yikes!',
+    OOF: 'Oof! Try again!',
+    ZONK: 'Zonk! Try harder!',
+    WHOOPS: 'Whoopsie!',
+    NOPE: 'Nope!',
+    OH_WELL: 'Oh well!',
+    GOSH: 'Gosh, not quite!',
+    DRATS: 'Drats!',
+    MISSED: 'Missed it!',
+    WRONGWAY: 'Wrong way!',
+    TRYHARDER: 'Try harder!',
+    GOTCHA: 'Gotcha! Try again!',
+    BACK_TO_IT: 'Back to it!',
+    GIVE_ANOTHER: 'Give it another go!',
+  };
 
-export const CORRECT_ANSWERS = {
+  export const CORRECT_ANSWERS = {
     CORRECT: 'Correct!',
     YOU: 'You are the best!',
-    SUPERB: 'Superb',
+    SUPERB: 'Superb!',
     COOL: 'Cool!',
-    INCREDIBLE: 'Incredible',
-    YEAH: 'YEAH',
-    HERO: 'You are my hero'
-};
-
+    INCREDIBLE: 'Incredible!',
+    YEAH: 'Yeah!',
+    HERO: 'You are my hero!',
+    FANTASTIC: 'Fantastic!',
+    AWESOME: 'Awesome!',
+    GREAT_JOB: 'Great Job!',
+    YOU_DID_IT: 'You did it!',
+    WELL_DONE: 'Well done!',
+    AMAZING: 'Amazing!',
+    BRAVO: 'Bravo!',
+    YIPPEE: 'Yippee!',
+    PERFECT: 'Perfect!',
+    NAILED_IT: 'Nailed it!',
+    EXCELLENT: 'Excellent!',
+    TERRIFIC: 'Terrific!',
+    WHOO_HOO: 'Whoo-hoo!',
+    YES: 'Yes!',
+    SUPERSTAR: 'Superstar!',
+    WINNER: 'Winner!',
+    GOLD_STAR: 'Gold star!',
+    HIGH_FIVE: 'High Five!',
+    KEEP_IT_UP: 'Keep it up!',
+    LEGENDARY: 'Legendary!',
+    GENIUS: 'Genius!',
+    CHAMPION: 'Champion!',
+    SPOT_ON: 'Spot on!',
+    WONDERFUL: 'Wonderful!',
+    BULLSEYE: 'Bullseye!',
+    KNOCKED_IT: 'Knocked it out!',
+    SPLENDID: 'Splendid!',
+  };
+  
 export const ROLES = {
     TEACHER: 'Teacher',
     STUDENT: 'Student'
@@ -155,6 +206,67 @@ export const FONTS = {
     },
 
 };
+
+
+// Define a color theme map
+export const COLOR_THEMES = {
+    blue: {
+      color: '#ADD8E6', // Light Blue
+      stroke: '#1E90FF', // Dodger Blue
+      shadow: '#00008B', // Dark Blue
+    },
+    orange: {
+      color: '#FFA500', // Orange
+      stroke: '#FF8C00', // Dark Orange
+      shadow: '#FF4500', // Orange Red
+    },
+    red: {
+      color: '#FF6347', // Tomato
+      stroke: '#FF4500', // Orange Red
+      shadow: '#8B0000', // Dark Red
+    },
+    brown: {
+        color: '#D2B48C', // Tan
+        stroke: '#8B4513', // Saddle Brown
+        shadow: '#4F2F1D', // Dark Brown
+    },
+    grey: {
+      color: '#D3D3D3', // Light Grey
+      stroke: '#A9A9A9', // Dark Grey
+      shadow: '#696969', // Dim Grey
+    },
+    purple: {
+      color: '#9370DB', // Medium Purple
+      stroke: '#BA55D3', // Orchid
+      shadow: '#4B0082', // Indigo
+    },
+    green: {
+      color: '#00FF00', 
+      stroke: '#006400',
+      shadow: '#32CD32', 
+    },
+    yellow: {
+        color: '#FFFF00', // Bright Yellow
+        stroke: '#FFD700', // Gold
+        shadow: '#B8860B', // Dark Goldenrod
+      },
+      cyan: {
+        color: '#00FFFF', // Cyan
+        stroke: '#00CED1', // Dark Turquoise
+        shadow: '#008B8B', // Dark Cyan
+      },
+      pink: {
+        color: '#FFC0CB', // Pink
+        stroke: '#FF69B4', // Hot Pink
+        shadow: '#C71585', // Medium Violet Red
+      },
+      gold: {
+        color: '#FFD700', // Gold
+        stroke: '#DAA520', // Goldenrod
+        shadow: '#B8860B', // Dark Goldenrod
+      },
+  };
+
 
 export const FISH_ANIMATIONS = {
     SWIM_BLUE: 'blueFish',
@@ -255,17 +367,17 @@ export const PLANT_GROWTH = {
 export const DEFAULT_DIFFICULTY = DIFFICULTY.MEDIUM;
 
 export const QUESTIONS = [
-    { ID: 1, QUESTION: 'Click the red fish', ANSWER: FISH_ANIMATIONS.SWIM_RED, SPEECH_ANSWER: 'RED FISH', COLOR: '#FF0000' },  // Red
-    { ID: 2, QUESTION: 'Click the blue fish', ANSWER: FISH_ANIMATIONS.SWIM_BLUE, SPEECH_ANSWER: 'BLUE FISH', COLOR: '#0000FF' },  // Blue
-    { ID: 3, QUESTION: 'Click the orange fish', ANSWER: FISH_ANIMATIONS.SWIM_ORANGE, SPEECH_ANSWER: 'ORANGE FISH', COLOR: '#FF5F1F' },  // Orange
-    { ID: 4, QUESTION: 'Click the green fish', ANSWER: FISH_ANIMATIONS.SWIM_GREEN, SPEECH_ANSWER: 'GREEN FISH', COLOR: '#008000' },  // Green
-    { ID: 5, QUESTION: 'Click the globe fish', ANSWER: FISH_ANIMATIONS.SWIM_GLOBE, SPEECH_ANSWER: 'GLOBE FISH', COLOR: '#964B00' },  // Yellow
-    { ID: 6, QUESTION: 'Click the grey fish', ANSWER: FISH_ANIMATIONS.SWIM_GREY, SPEECH_ANSWER: 'GREY FISH', COLOR: '#808080' },  // Grey
-    { ID: 7, QUESTION: 'Click the purple fish', ANSWER: FISH_ANIMATIONS.SWIM_PURPLE, SPEECH_ANSWER: 'PURPLE FISH', COLOR: '#d66fe8' },  // Purple
-    { ID: 8, QUESTION: 'Click the purple plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_PURPLE, SPEECH_ANSWER: 'PURPLE PLANT', COLOR: '#d66fe8' },  // Purple
-    { ID: 9, QUESTION: 'Click the green plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_GREEN, SPEECH_ANSWER: 'GREEN PLANT', COLOR: '#008000' },  // Green
-    { ID: 10, QUESTION: 'Click the blue plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_BLUE, SPEECH_ANSWER: 'BLUE PLANT', COLOR: '#0000FF' },  // Blue
-    { ID: 11, QUESTION: 'Click the orange plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_ORANGE, SPEECH_ANSWER: 'ORANGE PLANT', COLOR: '#FF5F1F' },  // Orange
+    { ID: 1, QUESTION: 'Click the red fish', ANSWER: FISH_ANIMATIONS.SWIM_RED, SPEECH_ANSWER: 'RED FISH', COLOR: 'red' },  // Red
+    { ID: 2, QUESTION: 'Click the blue fish', ANSWER: FISH_ANIMATIONS.SWIM_BLUE, SPEECH_ANSWER: 'BLUE FISH', COLOR: 'blue' },  // Blue
+    { ID: 3, QUESTION: 'Click the orange fish', ANSWER: FISH_ANIMATIONS.SWIM_ORANGE, SPEECH_ANSWER: 'ORANGE FISH', COLOR: 'orange' },  // Orange
+    { ID: 4, QUESTION: 'Click the green fish', ANSWER: FISH_ANIMATIONS.SWIM_GREEN, SPEECH_ANSWER: 'GREEN FISH', COLOR: 'green' },  // Green
+    { ID: 5, QUESTION: 'Click the globe fish', ANSWER: FISH_ANIMATIONS.SWIM_GLOBE, SPEECH_ANSWER: 'GLOBE FISH', COLOR: 'brown' },  // Yellow
+    { ID: 6, QUESTION: 'Click the grey fish', ANSWER: FISH_ANIMATIONS.SWIM_GREY, SPEECH_ANSWER: 'GREY FISH', COLOR: 'grey' },  // Grey
+    { ID: 7, QUESTION: 'Click the purple fish', ANSWER: FISH_ANIMATIONS.SWIM_PURPLE, SPEECH_ANSWER: 'PURPLE FISH', COLOR: 'purple' },  // Purple
+    { ID: 8, QUESTION: 'Click the purple plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_PURPLE, SPEECH_ANSWER: 'PURPLE PLANT', COLOR: 'purple' },  // Purple
+    { ID: 9, QUESTION: 'Click the green plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_GREEN, SPEECH_ANSWER: 'GREEN PLANT', COLOR: 'green' },  // Green
+    { ID: 10, QUESTION: 'Click the blue plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_BLUE, SPEECH_ANSWER: 'BLUE PLANT', COLOR: 'blue' },  // Blue
+    { ID: 11, QUESTION: 'Click the orange plant', ANSWER: PLANTS_ANIMATIONS.PLANT_ANIM_ORANGE, SPEECH_ANSWER: 'ORANGE PLANT', COLOR: 'orange' },  // Orange
 ];
 
 // Define colors for each role

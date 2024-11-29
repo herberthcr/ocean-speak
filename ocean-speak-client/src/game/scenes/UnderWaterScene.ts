@@ -7,7 +7,8 @@ import { UnderWaterObjectManager } from '../managers/UnderWaterObjectManager';
 import { TurnManager } from '../managers/TurnManager';
 import { InputSystem } from '../systems/InputSystem';
 import { ECSWorld } from '../ecs/ECSWorld';
-import { SCREEN, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, SOUNDS, DIFFICULTY, ROLES, AQUATIC_CHARACTERS, PLAYER_COLORS, DEFAULT_DIFFICULTY } from '../global/Constants';
+import { TextHelper } from '../global/TextHelper'
+import { SCREEN, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, SOUNDS, DIFFICULTY, ROLES, AQUATIC_CHARACTERS, COLOR_THEMES, PLAYER_COLORS, DEFAULT_DIFFICULTY } from '../global/Constants';
 import { useDebugValue } from 'react';
 
 export class UnderWaterScene extends Scene {
@@ -29,9 +30,6 @@ export class UnderWaterScene extends Scene {
   correctAnswers: number = 0; // Counter for correct answers
   private currentAnswer!: string;
   private currentSpeech!: string;
-  private turnText!: Phaser.GameObjects.BitmapText;
-  private countdownText!: Phaser.GameObjects.BitmapText;
-  private questionText!: Phaser.GameObjects.BitmapText;
   private soundIcon: Phaser.GameObjects.Sprite; // Sprite for the sound icon
   private soundIconONAnimKey: string = 'soundIconAnimON'; // Animation key for sound icon
   private soundIconOFFAnimKey: string = 'soundIconAnimOFF'; // Animation key for sound icon
@@ -40,15 +38,21 @@ export class UnderWaterScene extends Scene {
   private achievementOffset: number = 40;  // Vertical offset between achievements
   private achievementY: number = 200;
   private simulation: boolean = false; // Flag for simulation mode
-  private waitingMessageText!: Phaser.GameObjects.BitmapText;
+  private waitingMessageText!: Phaser.GameObjects.Text;
   private maxCorrectAnswers: number = 5;  // Win condition: 5 correct answers
   private gameOver: boolean = false;  // Track if the game is over
-  private interactionText!: Phaser.GameObjects.BitmapText;
-  private speechPointsText!: Phaser.GameObjects.BitmapText;
   private currentQuestionColor: string;
   private backButton!: Phaser.GameObjects.Image;
   private playerType: string;
   private speechRecognitionOn: string = 'off';
+  // Text
+  private textHelper!: TextHelper;
+  private interactionText!: Phaser.GameObjects.Text;
+  private speechPointsText!: Phaser.GameObjects.Text;
+  private speakText!: Phaser.GameObjects.Text;
+  private turnText!: Phaser.GameObjects.Text;
+  private countdownText!: Phaser.GameObjects.Text;
+  private questionText!: Phaser.GameObjects.Text;
 
   constructor() {
     super('UnderWaterScene');
@@ -73,9 +77,12 @@ export class UnderWaterScene extends Scene {
     this.turnManager = new TurnManager();
 
     const { maxScore, maxSpeechScore } = this.getMaxScores(this.difficulty);
-    debugger
+
     // Initialize game state system
     this.gameStateSystem = new GameStateSystem(maxScore, maxSpeechScore);
+
+    // Initialize Text helper
+    this.textHelper = new TextHelper(this);
 
     // Initialize input system
     this.inputSystem = new InputSystem(this, this.world, this.gameStateSystem);
@@ -140,10 +147,10 @@ export class UnderWaterScene extends Scene {
     this.world.update(delta);
   }
 
-  getMaxScores(difficulty: string): { maxScore: number; maxSpeechScore: number} {
+  getMaxScores(difficulty: string): { maxScore: number; maxSpeechScore: number } {
     const difficultyKey = difficulty.toUpperCase() as keyof typeof DIFFICULTY;
     const selectedDifficulty = DIFFICULTY[difficultyKey];
-    
+
     if (selectedDifficulty) {
       return {
         maxScore: selectedDifficulty.MAX_SCORE,
@@ -151,7 +158,6 @@ export class UnderWaterScene extends Scene {
       };
     }
     else {
-      debugger
       return {
         maxScore: DEFAULT_DIFFICULTY.MAX_SCORE,
         maxSpeechScore: DEFAULT_DIFFICULTY.MAX_SPEECH_SCORE,
@@ -160,43 +166,40 @@ export class UnderWaterScene extends Scene {
   }
 
   createInteractiveComponents() {
+
     // Add UI
-    this.interactionText = this.add.bitmapText(20, 35, FONTS.FONTS_KEYS.PIXEL_FONT, 'Interaction: 0', 24)
-      .setName('interactionScore')
-      //.setTint(0xFFFF00)
-      .setDepth(300);
+    this.interactionText = this.textHelper.createStyledText(20, 20, 200, '32px', 'Interaction: 0', TextHelper.TEXT_STYLES.default);
+    this.textHelper.AddAquaticTextEffect(this.interactionText);
 
-    this.speechPointsText = this.add.bitmapText(20, 65, FONTS.FONTS_KEYS.PIXEL_FONT, 'Speech: 0', 24)
-      .setName('speechScore')
-      //.setTint(0xFFFF00)
-      .setDepth(300);
+    this.speechPointsText = this.textHelper.createStyledText(20, 70, 200, '32px', 'Speech: 0', TextHelper.TEXT_STYLES.default);
+    this.speechPointsText.setVisible(false);
+    this.textHelper.AddAquaticTextEffect(this.speechPointsText)
 
-    this.questionText = this.add
-      .bitmapText(this.cameras.main.centerX, 700, FONTS.FONTS_KEYS.PIXEL_FONT, '', 24)
-      .setOrigin(0.5)
-      .setName('questionText').setDepth(150)
-      .setTint(PLAYER_COLORS.TEACHER);  // Set initial color to red for Teacher's turn
+    this.questionText = this.textHelper.createColoredText(this.cameras.main.centerX, 600, 200, '24px', '', 'pink');
+    this.questionText.setName('questionText').setOrigin(0.5);
+    this.textHelper.AddAquaticTextEffect(this.questionText);
 
-    this.turnText = this.add
-      .bitmapText(this.cameras.main.centerX, 750, FONTS.FONTS_KEYS.PIXEL_FONT, '', 24)
-      .setOrigin(0.5)
-      .setName('turnText').setDepth(150).setTint(PLAYER_COLORS.TEACHER);  // Set initial color to red for Teacher's turn;
+    this.turnText = this.textHelper.createColoredText(this.cameras.main.centerX, 20, 200, '24px', '', 'yellow');
+    this.turnText.setOrigin(0.5).setName('turnText');
+    this.textHelper.AddAquaticTextEffect(this.turnText);
 
-    this.waitingMessageText = this.add
-      .bitmapText(this.cameras.main.centerX, 20, FONTS.FONTS_KEYS.PIXEL_FONT, '', 18)
-      .setOrigin(0.5)
-      .setDepth(150)
-      .setTint(PLAYER_COLORS.TEACHER);
+    this.waitingMessageText = this.textHelper.createColoredText(this.cameras.main.centerX, 730, 200, '24px', '', 'yellow');
+    this.waitingMessageText.setOrigin(0.5);
+    this.textHelper.AddAquaticTextEffect(this.waitingMessageText);
 
-    this.countdownText = this.add
-      .bitmapText(this.cameras.main.centerX, this.cameras.main.centerY, FONTS.FONTS_KEYS.PIXEL_FONT, '', 48)
-      .setOrigin(0.5)
-      .setDepth(300)
-      .setVisible(false).setTint(PLAYER_COLORS.TEACHER); // Hidden initially
+    this.countdownText = this.textHelper.createColoredText(this.cameras.main.centerX, this.cameras.main.centerY, 200, '48px', '4', 'pink');
+    this.countdownText.setOrigin(0.5).setVisible(false);
+    this.textHelper.AddAquaticTextEffect(this.countdownText);
+
+    this.speakText = this.textHelper.createColoredText(790, 90, 200, '18px', 'Speak Placeholder', 'yellow');
+    this.speakText.setVisible(false);
+    this.textHelper.AddAquaticTextEffect(this.speakText);
 
     if (this.speechRecognitionOn === 'on') {
-      // Preload the sprite sheet for the sound icon (assume it has frames 1 to 3)
-      this.soundIcon = this.add.sprite(955, 20, IMAGES.MICS).setOrigin(0).setScale(1.5).setDepth(250);
+
+      this.speechPointsText.setVisible(true);
+
+      this.soundIcon = this.add.sprite(850, 20, IMAGES.MICS).setOrigin(0).setScale(1.5).setDepth(250);
 
       // Add sound icon animation (from frame 1 to 3)
       this.anims.create({
@@ -226,8 +229,6 @@ export class UnderWaterScene extends Scene {
       });
     }
 
-
-
     this.backButton = this.add.image(SCREEN.WIDTH - 20, SCREEN.HEIGHT - 20, IMAGES.BACK)
       .setOrigin(1)
       .setScale(2)
@@ -251,9 +252,10 @@ export class UnderWaterScene extends Scene {
 
   startSoloMode(): void {
     // In solo mode, skip teacher turn and directly start the student's turn.
-    this.updateTurnText(`Student: ${this.playerName} Turn`);
-    this.updateWaitingMessage(`Waiting for ${this.playerName} to answer...`, 'student');
-    this.turnText.setTint(PLAYER_COLORS.STUDENT);
+    const turnText = `Student: ${this.playerName}`;
+    this.updateTurnText(turnText);
+    this.updateWaitingMessage('Play Time! Speech Time!');
+    this.textHelper.updateTextColor(this.turnText, 'yellow');
     this.showQuestionAndHandleInput();
   }
 
@@ -262,14 +264,21 @@ export class UnderWaterScene extends Scene {
     // Show a valid question for the student
     const questionData = this.generateValidQuestion();
 
-    this.speechRecognitionOn === 'on' && this.soundIcon.anims.play(this.soundIconONAnimKey);
     this.currentAnswer = questionData.ANSWER;
     this.currentSpeech = questionData.SPEECH_ANSWER;
 
     this.currentQuestionColor = questionData.COLOR;
-    this.questionText.setText(`${questionData.QUESTION} - SPEAK: ${questionData.SPEECH_ANSWER}`);
-    const colorNumber = parseInt(this.currentQuestionColor.replace("#", ""), 16);
-    this.questionText.setTint(colorNumber);  // Apply the color as tint
+    this.questionText.setText(`${questionData.QUESTION}`);
+    this.textHelper.updateTextColor(this.questionText, questionData.COLOR);
+
+    if (this.speechRecognitionOn === 'on') {
+      this.soundIcon.anims.play(this.soundIconONAnimKey);
+      this.speakText.setVisible(true);
+      this.speakText.setText(`SPEAK: ${questionData.SPEECH_ANSWER}`);
+      this.textHelper.updateTextColor(this.speakText, questionData.COLOR);
+      this.inputSystem.handleSpeech(this.currentSpeech);
+    }
+
     this.questionText.setVisible(true);
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.Sprite) => {
@@ -287,9 +296,6 @@ export class UnderWaterScene extends Scene {
       if (clickedObject) {
         const isCorrect = this.inputSystem.handleInteraction(clickedObject as Phaser.GameObjects.Sprite, this.currentAnswer);
 
-        if (this.speechRecognitionOn) {
-          this.inputSystem.handleSpeech(this.currentSpeech);
-        }
         if (isCorrect) {
           this.showQuestionAndHandleInput();  // Show the next question
         }
@@ -310,13 +316,19 @@ export class UnderWaterScene extends Scene {
 
     this.announceTurn(`Teacher ${this.teacherName} Turn `, () => {
       this.time.delayedCall(2000, () => {
+
         const questionData = this.generateValidQuestion();
         this.currentQuestionColor = questionData.COLOR;
         this.currentAnswer = questionData.ANSWER;
-        this.questionText.setText(`${questionData.QUESTION} - SPEAK: ${questionData.SPEECH_ANSWER}`);
-        const colorNumber = parseInt(this.currentQuestionColor.replace("#", ""), 16);
-        this.questionText.setTint(colorNumber);  // Apply the color as tint
+        this.questionText.setText(`${questionData.QUESTION}`);
         this.questionText.setVisible(true);
+        this.textHelper.updateTextColor(this.questionText, questionData.COLOR);
+
+        if (this.speechRecognitionOn === 'on') {
+          this.speakText.setText(`SPEAK: ${questionData.SPEECH_ANSWER}`);
+          this.textHelper.updateTextColor(this.speakText, questionData.COLOR);
+          this.speakText.setVisible(true);
+        }
 
         // Switch to Student's Turn
         this.turnManager.switchTurn();
@@ -409,22 +421,6 @@ export class UnderWaterScene extends Scene {
     const tickSound = this.sound.add(SOUNDS.COUNTER_SOUND);
     tickSound.play();
 
-    const colorNumber = parseInt(this.currentQuestionColor.replace("#", ""), 16);
-    this.questionText.setTint(colorNumber);  // Apply the color as tint
-    const questionNotification = this.add.bitmapText(this.cameras.main.centerX, this.achievementY, FONTS.FONTS_KEYS.PIXEL_FONT, this.questionText.text, FONTS.FONT_SIZE_SMALL)
-      .setOrigin(0.5)
-      .setTint(colorNumber)
-      .setDepth(150);
-    this.tweens.add({
-      targets: questionNotification,
-      scale: 1.1,
-      yoyo: true,
-      duration: 1000,
-      repeat: -1,
-    });
-
-    this.time.delayedCall(5000, () => questionNotification.destroy());
-
     this.time.addEvent({
       delay: 1000,
       repeat: 4,
@@ -435,11 +431,16 @@ export class UnderWaterScene extends Scene {
           tickSound.play();
         } else {
           let message = 'Play Time! Speech Time!';
-          // `Play Time! ${this.getCurrentStudentName()}!.`
+
           this.updateWaitingMessage(message, 'student');
           this.updateDisplayMessages('student', '');
-          this.countdownText.setText(`Play Time ${this.playerName}!`).setTint(PLAYER_COLORS.STUDENT);
-          this.speechRecognitionOn === 'on' && this.soundIcon.anims.play(this.soundIconONAnimKey);
+          this.countdownText.setText(`Play Time ${this.playerName}!`);
+          this.textHelper.updateTextColor(this.countdownText, 'yellow');
+          if (this.speechRecognitionOn === 'on') {
+            this.soundIcon.anims.play(this.soundIconONAnimKey);
+            this.speakText.setVisible(true);
+          }
+
           this.time.delayedCall(1500, () => {
             this.countdownText.setVisible(false);
             onComplete();
@@ -455,7 +456,11 @@ export class UnderWaterScene extends Scene {
     this.updateWaitingMessage(`Waiting for Teacher ${this.teacherName}...`, 'teacher');
     this.updateDisplayMessages('teacher', turn);
 
-    this.speechRecognitionOn === 'on' && this.soundIcon.anims.play(this.soundIconOFFAnimKey);
+    if (this.speechRecognitionOn === 'on') {
+      this.soundIcon.anims.play(this.soundIconOFFAnimKey);
+      this.speakText.setVisible(false);
+    }
+
     const wooshSound = this.sound.add(SOUNDS.WOOSH_SOUND);
     wooshSound.play();
     this.tweens.add({
@@ -503,10 +508,10 @@ export class UnderWaterScene extends Scene {
 
     this.time.delayedCall(4000, () => {
 
-      const restartingNotification = this.add.bitmapText(this.cameras.main.centerX, this.achievementY, FONTS.FONTS_KEYS.PIXEL_FONT, 'Restarting Game', FONTS.FONT_SIZE_BIG)
-        .setOrigin(0.5)
-        .setTint(PLAYER_COLORS.TEACHER)
-        .setDepth(150);
+      const restartingNotification = this.textHelper.createColoredText(this.cameras.main.centerX, this.achievementY, 200, '48px', 'Restarting Game', 'red');
+      restartingNotification.setName('questionText').setOrigin(0.5);
+      this.textHelper.AddAquaticTextEffect(restartingNotification);
+
       this.tweens.add({
         targets: restartingNotification,
         scale: 1.1,
@@ -530,6 +535,7 @@ export class UnderWaterScene extends Scene {
   restartGame(): void {
     // Reset game state values
     this.gameOver = false;
+    this.inputSystem.GameStart();
     this.gameStateSystem.resetScores();
     this.correctAnswers = 0;  // Reset correct answers count
     this.questionText.setText('');  // Clear the question text
@@ -537,7 +543,6 @@ export class UnderWaterScene extends Scene {
     this.countdownText.setVisible(false);  // Hide countdown
     this.waitingMessageText.setText('');  // Clear the waiting message
     this.input.enabled = true;  // Enable input again
-    this.inputSystem.GameStart();
 
     this.interactionText.setText('Interaction: 0');
     this.speechPointsText.setText('Speech: 0');
@@ -563,13 +568,13 @@ export class UnderWaterScene extends Scene {
     // Set the tint based on the role
     switch (role) {
       case 'teacher':
-        this.waitingMessageText.setTint(PLAYER_COLORS.TEACHER); // Red for Teacher
+        this.textHelper.updateTextColor(this.waitingMessageText, 'pink');
         break;
       case 'student':
-        this.waitingMessageText.setTint(PLAYER_COLORS.STUDENT); // Yellow for Student
+        this.textHelper.updateTextColor(this.waitingMessageText, 'yellow');
         break;
       default:
-        this.waitingMessageText.setTint(PLAYER_COLORS.OTHER_PLAYER); // Blue for Other Players
+        this.textHelper.updateTextColor(this.waitingMessageText, 'blue');
     }
   }
 
@@ -579,17 +584,14 @@ export class UnderWaterScene extends Scene {
     switch (role) {
       case 'teacher':
         this.countdownText.setText(turn).setVisible(true);
-        this.countdownText.setTint(PLAYER_COLORS.TEACHER);
-        this.turnText.setTint(PLAYER_COLORS.TEACHER);
-        // this.questionText.setTint(PLAYER_COLORS.TEACHER);
+        this.textHelper.updateTextColor(this.countdownText, 'pink');
+        this.textHelper.updateTextColor(this.turnText, 'pink');
         break;
       case 'student':
-        this.turnText.setTint(PLAYER_COLORS.STUDENT);
-        //    this.questionText.setTint(PLAYER_COLORS.STUDENT);
+        this.textHelper.updateTextColor(this.turnText, 'yellow');
         break;
       default:
-        this.turnText.setTint(PLAYER_COLORS.OTHER_PLAYER); // Blue for Other Players
-        //  this.questionText.setTint(PLAYER_COLORS.OTHER_PLAYER);
+        this.textHelper.updateTextColor(this.turnText, 'blue');
         break;
     }
   }

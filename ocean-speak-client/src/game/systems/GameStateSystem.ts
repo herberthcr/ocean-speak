@@ -11,7 +11,7 @@ export class GameStateSystem {
     private minInteractionScore: number;
 
     constructor(maxInteractionScore: number, minInteractionScore: number) {
-        debugger
+        
         this.maxInteractionScore = maxInteractionScore
         this.minInteractionScore = minInteractionScore;
     }
@@ -80,7 +80,6 @@ export class GameStateSystem {
     }
 
     hasWon(): boolean {
-        debugger
         return this.interactionPoints >= this.maxInteractionScore && this.speechPoints >= this.minInteractionScore;
     }
 }

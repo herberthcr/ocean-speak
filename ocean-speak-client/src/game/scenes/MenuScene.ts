@@ -5,6 +5,7 @@ import {
   SOUNDS, AQUATIC_CHARACTERS, DIFFICULTY
 } from '../global/Constants';
 import { Helpers } from '../global/Helpers';
+import { TextHelper } from '../global/TextHelper'
 
 
 export class MenuScene extends Scene {
@@ -21,34 +22,36 @@ export class MenuScene extends Scene {
   private enter!: any;
   private playerNameText: string;
   private welcomeText: string;
+  
+ // Text helper
+  private textHelper!: TextHelper;
 
   // Scene text
   private textArray: Phaser.GameObjects.BitmapText[] = []; // Array to store BitmapText objects
 
   // mode text
-  private welcomeBitmapText: Phaser.GameObjects.BitmapText;
-  private offlineModeText: Phaser.GameObjects.BitmapText;
-  private onlineModeText: Phaser.GameObjects.BitmapText;
-  private soloModeText: Phaser.GameObjects.BitmapText;
-  private gameModeText: Phaser.GameObjects.BitmapText;
-  private nameTextObject: Phaser.GameObjects.BitmapText;
+  private welcomeBitmapText: Phaser.GameObjects.Text;
+  private offlineModeText: Phaser.GameObjects.Text;
+  private onlineModeText: Phaser.GameObjects.Text;
+  private soloModeText: Phaser.GameObjects.Text;
+  private gameModeText: Phaser.GameObjects.Text;
+  private nameTextObject: Phaser.GameObjects.Text;
   // difficulty text
-  private selectDifficultyText: Phaser.GameObjects.BitmapText;
-  private easyText: Phaser.GameObjects.BitmapText;
-  private mediumText: Phaser.GameObjects.BitmapText;
-  private hardText: Phaser.GameObjects.BitmapText;
+  private selectDifficultyText: Phaser.GameObjects.Text;
+  private easyText: Phaser.GameObjects.Text;
+  private mediumText: Phaser.GameObjects.Text;
+  private hardText: Phaser.GameObjects.Text;
 
   // Speech therapy on or of
-  private speechText: Phaser.GameObjects.BitmapText;
-  private speechOnText: Phaser.GameObjects.BitmapText;
-  private speechOffText: Phaser.GameObjects.BitmapText;
-  private playGame: Phaser.GameObjects.BitmapText;
+  private speechText: Phaser.GameObjects.Text;
+  private speechOnText: Phaser.GameObjects.Text;
+  private speechOffText: Phaser.GameObjects.Text;
+  private playGame: Phaser.GameObjects.Text;
 
   private mouseOverSound: Phaser.Sound.BaseSound;
   private mouseClickSound: Phaser.Sound.BaseSound;
 
-
-
+ 
   constructor() {
     super('MenuScene');
     this.playerName = '';
@@ -75,7 +78,8 @@ export class MenuScene extends Scene {
     this.playWelcomeEmitter();
     this.mouseOverSound = this.sound.add(SOUNDS.MOUSE_OVER_SOUND);
     this.mouseClickSound = this.sound.add(SOUNDS.MOUSE_CLICK_SOUND);
-
+    // Initialize Text helper
+    this.textHelper = new TextHelper(this);
     // initial state
     this.currentState = MENU_STATES.PLAYER_TTPE;
     this.initialSetup();
@@ -96,7 +100,7 @@ export class MenuScene extends Scene {
       this.playerName = this.playerName.substring(0, this.playerName.length - 1);
     }
     if (Phaser.Input.Keyboard.JustDown(this.enter)) {
-      //  this.scene.start("playgame", this.playerName);
+    
       this.manageScreenTransition();
     }
     this.nameTextObject.setText(this.playerNameText + this.playerName)
@@ -127,81 +131,95 @@ export class MenuScene extends Scene {
 
   initialSetup() {
     this.welcomeText = `Welcome to the ocean`;
-    this.playerSelectionText = `Select type of player?`;
-
-    this.welcomeBitmapText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 5.5, FONTS.FONTS_KEYS.PIXEL_FONT,
-      this.welcomeText, FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
+    this.welcomeBitmapText = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 6, 200, '70px', this.welcomeText, 'blue');
+    this.welcomeBitmapText.setOrigin(0.5, 1).setDepth(100);
+    this.textHelper.AddAquaticTextEffect(this.welcomeBitmapText);
     this.AddTextEffect(this.welcomeBitmapText);
     this.addTextToArray(this.welcomeBitmapText);
 
-    this.playerNameText = 'Enter your name:\n\n ';
-    this.nameTextObject = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2.8, FONTS.FONTS_KEYS.PIXEL_FONT,
-      this.playerNameText, FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100);
+    this.playerNameText = 'Enter your name:\n ';
+    this.nameTextObject = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2.8, 200, '48px', this.playerNameText, 'blue');
+    this.nameTextObject.setOrigin(0.5, 1).setDepth(100);
     this.AddTextEffect(this.nameTextObject);
     this.addTextToArray(this.nameTextObject);
+    this.textHelper.AddAquaticTextEffect(this.nameTextObject);
 
-    this.gameModeText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2.2, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Choose Game Type', FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
+    this.gameModeText = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2.2, 200, '48px', 'Choose Game Type', 'blue');
+    this.gameModeText.setOrigin(0.5, 1).setDepth(100);
     this.AddTextEffect(this.gameModeText);
     this.addTextToArray(this.gameModeText);
+    this.textHelper.AddAquaticTextEffect(this.gameModeText);
 
-    this.soloModeText = this.add.bitmapText(SCREEN.WIDTH / 2 - 250, SCREEN.HEIGHT / 2, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Solo', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
+
+    this.soloModeText = this.textHelper.createColoredText(SCREEN.WIDTH / 2 - 200, SCREEN.HEIGHT / 1.95, 200, '32px', 'Solo', 'blue');
+    this.soloModeText.setOrigin(0.5, 1).setDepth(100).setInteractive();
     this.AddTextEffect(this.soloModeText);
     this.addTextToArray(this.soloModeText);
+    this.textHelper.AddAquaticTextEffect(this.soloModeText);
 
-    this.offlineModeText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Simulation', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
+
+    this.offlineModeText = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.95, 200, '32px', 'Simulation', 'blue');
+    this.offlineModeText.setOrigin(0.5, 1).setDepth(100).setInteractive();
     this.AddTextEffect(this.offlineModeText);
     this.addTextToArray(this.offlineModeText);
+    this.textHelper.AddAquaticTextEffect(this.offlineModeText);
 
-    this.onlineModeText = this.add.bitmapText(SCREEN.WIDTH / 2 + 250, SCREEN.HEIGHT / 2, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Online', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.onlineModeText = this.textHelper.createColoredText(SCREEN.WIDTH / 2 + 200, SCREEN.HEIGHT / 1.95, 200, '32px', 'Online', 'blue');
+    this.onlineModeText.setOrigin(0.5, 1).setDepth(100).setInteractive();
     this.AddTextEffect(this.onlineModeText);
     this.addTextToArray(this.onlineModeText);
+    this.textHelper.AddAquaticTextEffect(this.onlineModeText);
 
-    this.selectDifficultyText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.65, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Game Difficulty', FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
+
+    this.selectDifficultyText = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.65, 200, '48px', 'Select Difficulty', 'blue');
+    this.selectDifficultyText.setOrigin(0.5, 1).setDepth(100);
     this.AddTextEffect(this.selectDifficultyText);
     this.addTextToArray(this.selectDifficultyText);
+    this.textHelper.AddAquaticTextEffect(this.selectDifficultyText);
 
-    this.easyText = this.add.bitmapText(SCREEN.WIDTH / 2 - 250, SCREEN.HEIGHT / 1.55, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Easy', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.easyText = this.textHelper.createColoredText(SCREEN.WIDTH / 2 - 150, SCREEN.HEIGHT / 1.5, 200, '32px', 'Easy', 'blue');
+    this.easyText.setOrigin(0.5, 1).setDepth(100).setInteractive();
     this.AddTextEffect(this.easyText);
     this.addTextToArray(this.easyText);
+    this.textHelper.AddAquaticTextEffect(this.easyText);
 
-    this.mediumText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.55, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Medium', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.mediumText = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.5, 200, '32px', 'Medium', 'blue');
+    this.mediumText.setOrigin(0.5, 1).setDepth(100).setInteractive();
     this.AddTextEffect(this.mediumText);
     this.addTextToArray(this.mediumText);
+    this.textHelper.AddAquaticTextEffect(this.mediumText);
 
-    this.hardText = this.add.bitmapText(SCREEN.WIDTH / 2 + 250, SCREEN.HEIGHT / 1.55, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Hard', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.hardText = this.textHelper.createColoredText(SCREEN.WIDTH / 2 + 150, SCREEN.HEIGHT / 1.5, 200, '32px', 'Hard', 'blue');
+    this.hardText.setOrigin(0.5, 1).setDepth(100).setInteractive();
     this.AddTextEffect(this.hardText);
     this.addTextToArray(this.hardText);
+    this.textHelper.AddAquaticTextEffect(this.hardText);
 
-    this.speechText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.35, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Do you have a microphone?', FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
+    this.speechText = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.32, 200, '48px', 'Do you have a microphone?', 'blue');
+    this.speechText.setOrigin(0.5, 1).setDepth(100);
     this.AddTextEffect(this.speechText);
     this.addTextToArray(this.speechText);
+    this.textHelper.AddAquaticTextEffect(this.speechText);
 
-    this.speechOnText = this.add.bitmapText(SCREEN.WIDTH / 2 - 100, SCREEN.HEIGHT / 1.27, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Yes', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.speechOnText = this.textHelper.createColoredText(SCREEN.WIDTH / 2 - 100, SCREEN.HEIGHT / 1.23, 200, '32px', 'Yes', 'blue');
+    this.speechOnText.setOrigin(0.5, 1).setDepth(100).setInteractive();
     this.AddTextEffect(this.speechOnText);
     this.addTextToArray(this.speechOnText);
+    this.textHelper.AddAquaticTextEffect(this.speechOnText);
 
-    this.speechOffText = this.add.bitmapText(SCREEN.WIDTH / 2 + 100, SCREEN.HEIGHT / 1.27, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'No', FONTS.FONT_SIZE_MEDIUM).setOrigin(0.5, 1).setDepth(100).setInteractive();
-    this.AddTextEffect(this.speechOffText);
+    this.speechOffText =  this.textHelper.createColoredText(SCREEN.WIDTH / 2 + 100, SCREEN.HEIGHT / 1.23, 200, '32px', 'No', 'blue');
+    this.speechOffText.setOrigin(0.5, 1).setDepth(100).setInteractive();
     this.addTextToArray(this.speechOffText);
+    this.textHelper.AddAquaticTextEffect(this.speechOffText);
 
-    this.playGame = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.08, FONTS.FONTS_KEYS.PIXEL_FONT,
-      'Play Game', FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.playGame = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.05, 200, '64px', 'Start Game', 'blue');
+    this.playGame.setOrigin(0.5, 1).setDepth(100).setInteractive();
+    this.textHelper.AddAquaticTextEffect(this.playGame);
 
     this.add.tween({
       targets: this.playGame,
-      scaleX: 1.25,
-      scaleY: 1.25,
+      scaleX: 1.2,
+      scaleY: 1.2,
       ease: 'Sine.easeInOut',
       duration: 2000,
       yoyo: true,
@@ -210,10 +228,10 @@ export class MenuScene extends Scene {
 
     this.playGame.on(Phaser.Input.Events.POINTER_OVER, () => {
       this.mouseOverSound.play();
-      this.playGame.setTint(0xc0e578);
+      this.textHelper.updateTextColor(this.playGame, 'gold');
     });
     this.playGame.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OUT, () => {
-      this.playGame.setTint(0xFFFFFF);
+      this.textHelper.updateTextColor(this.playGame, 'blue');
     });
 
     this.addTextToArray(this.playGame);
@@ -221,74 +239,75 @@ export class MenuScene extends Scene {
     this.mode = 'solo';
     this.difficulty = 'medium';
     this.speechRecognitionOn = 'on';
-    this.soloModeText.setTint(0xc0e578);
-    this.mediumText.setTint(0xc0e578);
-    this.speechOnText.setTint(0xc0e578);
+  
+    this.textHelper.updateTextColor(this.mediumText, 'gold');
+    this.textHelper.updateTextColor(this.speechOnText, 'gold');
+    this.textHelper.updateTextColor(this.soloModeText, 'gold');
 
     this.soloModeText.on('pointerdown', () => {
       this.mode = 'solo';
-      this.offlineModeText.setTint(0xffffff);
-      this.onlineModeText.setTint(0xffffff);
-      this.soloModeText.setTint(0xc0e578);
+      this.textHelper.updateTextColor(this.offlineModeText, 'blue');
+      this.textHelper.updateTextColor(this.onlineModeText, 'blue');
+      this.textHelper.updateTextColor(this.soloModeText, 'gold');
       this.mouseClickSound.play();
     });
 
     this.offlineModeText.on('pointerdown', () => {
       this.mode = 'simulation';
-      this.offlineModeText.setTint(0xc0e578);
-      this.onlineModeText.setTint(0xffffff);
-      this.soloModeText.setTint(0xffffff);
+      this.textHelper.updateTextColor(this.offlineModeText, 'gold');
+      this.textHelper.updateTextColor(this.onlineModeText, 'blue');
+      this.textHelper.updateTextColor(this.soloModeText, 'blue');
       this.mouseClickSound.play();
     });
 
     this.onlineModeText.on('pointerdown', () => {
       this.mode = 'online';
-      this.offlineModeText.setTint(0xffffff);
-      this.onlineModeText.setTint(0xc0e578);
-      this.soloModeText.setTint(0xffffff);
+      this.textHelper.updateTextColor(this.offlineModeText, 'blue');
+      this.textHelper.updateTextColor(this.onlineModeText, 'gold');
+      this.textHelper.updateTextColor(this.soloModeText, 'blue');
       this.mouseClickSound.play();
     });
 
-
     this.easyText.on('pointerdown', () => {
       this.difficulty = 'easy';
-      this.mediumText.setTint(0xffffff);
-      this.hardText.setTint(0xffffff);
-      this.easyText.setTint(0xc0e578);
+      this.textHelper.updateTextColor(this.mediumText, 'blue');
+      this.textHelper.updateTextColor(this.hardText, 'blue');
+      this.textHelper.updateTextColor(this.easyText, 'gold');
       this.mouseClickSound.play();
     });
 
     this.mediumText.on('pointerdown', () => {
       this.difficulty = 'medium';
-      this.hardText.setTint(0xffffff);
-      this.mediumText.setTint(0xc0e578);
-      this.easyText.setTint(0xffffff);
+      this.textHelper.updateTextColor(this.mediumText, 'gold');
+      this.textHelper.updateTextColor(this.hardText, 'blue');
+      this.textHelper.updateTextColor(this.easyText, 'blue');
       this.mouseClickSound.play();
     });
 
     this.hardText.on('pointerdown', () => {
       this.difficulty = 'hard';
-      this.mediumText.setTint(0xffffff);
-      this.hardText.setTint(0xc0e578);
-      this.easyText.setTint(0xffffff);
+      this.textHelper.updateTextColor(this.mediumText, 'blue');
+      this.textHelper.updateTextColor(this.hardText, 'gold');
+      this.textHelper.updateTextColor(this.easyText, 'blue');
       this.mouseClickSound.play();
     });
 
     this.speechOnText.on('pointerdown', () => {
       this.speechRecognitionOn = 'on';
-      this.speechOnText.setTint(0xc0e578);
-      this.speechOffText.setTint(0xffffff);
+      this.textHelper.updateTextColor(this.speechOnText, 'gold');
+      this.textHelper.updateTextColor(this.speechOffText, 'blue');
       this.mouseClickSound.play();
     });
 
     this.speechOffText.on('pointerdown', () => {
       this.speechRecognitionOn = 'off';
-      this.speechOnText.setTint(0xffffff);
-      this.speechOffText.setTint(0xc0e578);
+      this.textHelper.updateTextColor(this.speechOnText, 'blue');
+      this.textHelper.updateTextColor(this.speechOffText, 'gold');
       this.mouseClickSound.play();
     });
 
     this.playGame.on('pointerdown', () => {
+      this.textHelper.updateTextColor(this.playGame, 'red');
       this.mouseClickSound.play();
       this.manageScreenTransition();
     });
@@ -296,7 +315,7 @@ export class MenuScene extends Scene {
   }
 
   // Add a BitmapText object to the array
-  private addTextToArray(text: Phaser.GameObjects.BitmapText): void {
+  private addTextToArray(text: Phaser.GameObjects.Text): void {
     this.textArray.push(text); // Push the BitmapText to the array
   }
 
@@ -313,7 +332,7 @@ export class MenuScene extends Scene {
     this.textArray = [];
   }
 
-  AddTextEffect(text: Phaser.GameObjects.BitmapText) {
+  AddTextEffect(text: Phaser.GameObjects.Text) {
     this.add.tween({
       targets: text,
       scaleX: 1.01,
@@ -365,30 +384,33 @@ export class MenuScene extends Scene {
     const mode = this.mode;
     const difficulty = this.difficulty;
     const speechRecognitionOn = this.speechRecognitionOn;
-
-    const startGameText = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 3, FONTS.FONTS_KEYS.PIXEL_FONT,
-      `Starting game for `, FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
+    
+     const startGameText  = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 3, 200, '48px', `Starting game for `, 'blue');
+    startGameText.setOrigin(0.5, 1).setDepth(100);
     this.AddTextEffect(startGameText);
-    startGameText.setTint(0xc0e578);
+    this.textHelper.AddAquaticTextEffect(startGameText);
 
-    const nameTextObject = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2.1, FONTS.FONTS_KEYS.PIXEL_FONT,
-      playerName, FONTS.FONT_SIZE_BIG).setOrigin(0.5, 1).setDepth(100);
+    const nameTextObject  = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2.1, 200, '48px', playerName, 'blue');
+    nameTextObject.setOrigin(0.5, 1).setDepth(100);
     this.AddTextEffect(nameTextObject);
-    nameTextObject.setTint(0xc0e578);
+    this.textHelper.AddAquaticTextEffect(nameTextObject);
 
     const difficultyKey = difficulty.toUpperCase() as keyof typeof DIFFICULTY;
     const selectedDifficulty = DIFFICULTY[difficultyKey];
 
-    const rulesMax = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.6, FONTS.FONTS_KEYS.PIXEL_FONT,
-      selectedDifficulty.RULES_MAX_SCORE, FONTS.FONT_SIZE_MEDIUM_BIG).setOrigin(0.5, 1).setDepth(100);
+    const rulesMax  = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.6, 200, '48px', selectedDifficulty.RULES_MAX_SCORE, 'blue');
+    rulesMax.setOrigin(0.5, 1).setDepth(100);
     this.AddTextEffect(rulesMax);
-    rulesMax.setTint(0xc0e578);
+    this.textHelper.AddAquaticTextEffect(rulesMax);
+
+    
 
     if (speechRecognitionOn == 'on') {
-      const rulesMaxSpeech = this.add.bitmapText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.3, FONTS.FONTS_KEYS.PIXEL_FONT,
-        selectedDifficulty.RULES_MAX_SPEECH_SCORE, FONTS.FONT_SIZE_MEDIUM_BIG).setOrigin(0.5, 1).setDepth(100);
+
+      const rulesMaxSpeech  = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.3, 200, '48px', selectedDifficulty.RULES_MAX_SPEECH_SCORE, 'blue');
+      rulesMaxSpeech.setOrigin(0.5, 1).setDepth(100);
       this.AddTextEffect(rulesMaxSpeech);
-      rulesMaxSpeech.setTint(0xc0e578);
+      this.textHelper.AddAquaticTextEffect(rulesMaxSpeech);
     }
 
     this.cameras.main.once('camerafadeoutcomplete', () => {
