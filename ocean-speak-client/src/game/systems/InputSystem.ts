@@ -23,6 +23,7 @@ export class InputSystem extends System {
   }
 
   handleInteraction(clickTarget: Phaser.GameObjects.Sprite, correctAnswer: string) {
+    debugger
     if (!clickTarget) {
       return false; // No interaction occurred
     }

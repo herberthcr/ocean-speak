@@ -338,6 +338,7 @@ export class UnderWaterObjectManager {
   }
   // Check if a specific fish has already been created
   hasFish(fishType: string): boolean {
+    
     return this.createdFish.has(fishType);
   }
 

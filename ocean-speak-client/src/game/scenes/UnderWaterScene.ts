@@ -8,8 +8,10 @@ import { TurnManager } from '../managers/TurnManager';
 import { InputSystem } from '../systems/InputSystem';
 import { ECSWorld } from '../ecs/ECSWorld';
 import { TextHelper } from '../global/TextHelper'
-import { SCREEN, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, SOUNDS, DIFFICULTY, ROLES, AQUATIC_CHARACTERS, COLOR_THEMES, PLAYER_COLORS, DEFAULT_DIFFICULTY } from '../global/Constants';
+import { SCREEN, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, FISH_ANIMATIONS, PLANTS_ANIMATIONS, SOUNDS, DIFFICULTY, ROLES, AQUATIC_CHARACTERS, COLOR_THEMES, PLAYER_COLORS, DEFAULT_DIFFICULTY } from '../global/Constants';
 import { useDebugValue } from 'react';
+
+import { TeacherClient } from '../client/TeacherClient'
 
 export class UnderWaterScene extends Scene {
   private world!: ECSWorld;
@@ -53,6 +55,7 @@ export class UnderWaterScene extends Scene {
   private turnText!: Phaser.GameObjects.Text;
   private countdownText!: Phaser.GameObjects.Text;
   private questionText!: Phaser.GameObjects.Text;
+  private teacherClient!: TeacherClient;
 
   constructor() {
     super('UnderWaterScene');
@@ -138,13 +141,173 @@ export class UnderWaterScene extends Scene {
     }
     else {
       // ONLINE COMING SOON
-      this.teacherTurn();
+      this.manageClientServer();
     }
     EventBus.emit('current-scene-ready', this);
   }
 
   update(time: number, delta: number): void {
     this.world.update(delta);
+  }
+
+
+  manageClientServer(): void {
+    if (!this.teacherClient) {
+      this.teacherClient = new TeacherClient(this);
+    }
+    try {
+      // Attempt to connect to the server
+      this.teacherClient.connect((success: boolean) => {
+        if (success) {
+          // Listen for validated questions from the teacher server
+          this.events.on("validatedQuestion", (question) => {
+            this.validateAndHandleQuestion(question);
+          });
+
+          // Listen for game over events from the server
+          this.events.on("gameOver", (message) => {
+            this.endGameServer(message);
+          });/*  */
+        } else {
+          console.error("Failed to connect to TeacherClient. Server may be down.");
+
+
+         const serverNotAvailable = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 2, 200, '48px', 
+            `Failed to connect to Teacher Server`, 'red');
+            serverNotAvailable.setOrigin(0.5, 1).setDepth(100);
+          this.textHelper.AddAquaticTextEffect(serverNotAvailable);
+
+
+          this.tweens.add({
+            targets: serverNotAvailable,
+            alpha: 0, // Gradually reduce alpha to 0
+            duration: 6000, // Fade out duration
+            onComplete: () => {
+              this.thisIsTheEnd();
+            },
+          });
+
+        }
+      });
+
+      // Request the first question
+      this.teacherClient.requestQuestion();
+    } catch (error) {
+      console.error("Error initializing TeacherClient:", error);
+      //this.showServerError(); // Graceful fallback
+    }
+  }
+
+  validateAndHandleQuestion(question: {
+    ID: number;
+    QUESTION: string;
+    ANSWER: string;
+    SPEECH_ANSWER: string;
+    COLOR: string;
+  }): void {
+    console.log("Validating received question:", question);
+
+    // Validate the question against the current state
+    if (this.isValidQuestion(question)) {
+      this.handleValidatedQuestion(question);
+    } else {
+      console.warn("Received invalid question. Requesting a new one...");
+      this.teacherClient.requestQuestion(); // Request a new question if invalid
+    }
+  }
+
+  isValidQuestion(question: { QUESTION: string, ANSWER: string }): boolean {
+
+
+    if (question.QUESTION.toUpperCase().includes("FISH")) {
+      return this.objectManager.hasFish(FISH_ANIMATIONS[question.ANSWER]);
+    } else if (question.QUESTION.toUpperCase().includes("PLANT")) {
+      return this.objectManager.hasPlant(PLANTS_ANIMATIONS[question.ANSWER]);
+    }
+    return false;
+  }
+
+  endGameServer(message: string): void {
+
+    // Notify the server the game has ended
+    this.teacherClient.sendGameEnd(message);
+
+    this.thisIsTheEnd();
+
+  }
+
+  handleValidatedQuestion(question: {
+    ID: number;
+    QUESTION: string;
+    ANSWER: string;
+    SPEECH_ANSWER: string;
+    COLOR: string;
+  }): void {
+    console.log("Handling validated question:", question);
+
+    if (question.QUESTION.toUpperCase().includes("FISH")) {
+      this.currentAnswer = FISH_ANIMATIONS[question.ANSWER];
+    } else if (question.QUESTION.toUpperCase().includes("PLANT")) {
+      this.currentAnswer = PLANTS_ANIMATIONS[question.ANSWER];
+    }
+    //this.currentAnswer = question.ANSWER;
+    this.currentSpeech = question.SPEECH_ANSWER;
+
+    debugger
+    // Update UI
+    this.questionText.setText(question.QUESTION);
+    this.textHelper.updateTextColor(this.questionText, question.COLOR);
+
+    if (this.speechRecognitionOn === "on") {
+      this.speakText.setText(`SPEAK: ${question.SPEECH_ANSWER}`);
+      this.textHelper.updateTextColor(this.speakText, question.COLOR);
+      this.speakText.setVisible(true);
+      this.soundIcon.anims.play(this.soundIconONAnimKey);
+      this.inputSystem.handleSpeech(this.currentSpeech);
+    }
+    // Enable input and handle clicks
+    this.enablePlayerInput();
+  }
+
+  // Enable player's input and handle clicks
+  enablePlayerInput(): void {
+    debugger
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.Sprite) => {
+      if (!this.canClick) return;
+      this.canClick = false;
+
+      const clickedObject =
+        this.fishGroup.getChildren().find((obj) =>
+          (obj as Phaser.GameObjects.Sprite).getBounds().contains(pointer.x, pointer.y)
+        ) ||
+        this.plantGroup.getChildren().find((obj) =>
+          (obj as Phaser.GameObjects.Sprite).getBounds().contains(pointer.x, pointer.y)
+        );
+
+      if (clickedObject) {
+        const isCorrect = this.inputSystem.handleInteraction(clickedObject as Phaser.GameObjects.Sprite, this.currentAnswer);
+
+        if (isCorrect) {
+          // Notify server about the updated score
+          this.sendGameStateToServer();
+          // Request the next question
+          this.teacherClient.requestQuestion();
+        }
+      }
+
+      this.time.delayedCall(this.clickCooldownTime, () => {
+        this.canClick = true;
+      });
+    });
+  }
+
+  // Notify server about the game state
+  sendGameStateToServer(): void {
+    this.teacherClient.sendScoreUpdate({
+      playerName: this.playerName,
+      interactionScore: this.gameStateSystem.interactionPoints,
+      speechScore: this.gameStateSystem.speechPoints,
+    });
   }
 
   getMaxScores(difficulty: string): { maxScore: number; maxSpeechScore: number } {
@@ -246,8 +409,13 @@ export class UnderWaterScene extends Scene {
     });
 
     this.backButton.on(Phaser.Input.Events.POINTER_UP, () => {
-      window.location.reload();
+      this.thisIsTheEnd();
     })
+  }
+
+  thisIsTheEnd() {
+    // I have a bug restarting the scene, will change this later
+    window.location.reload();
   }
 
   startSoloMode(): void {
@@ -536,6 +704,8 @@ export class UnderWaterScene extends Scene {
     // Reset game state values
     this.gameOver = false;
     this.inputSystem.GameStart();
+
+    this.sendGameStateToServer();
     this.gameStateSystem.resetScores();
     this.correctAnswers = 0;  // Reset correct answers count
     this.questionText.setText('');  // Clear the question text
@@ -550,11 +720,13 @@ export class UnderWaterScene extends Scene {
 
     if (this.gameMode === 'solo') {
       this.startSoloMode();
-    } else {
+    } else if ((this.gameMode === 'simulation')) {
       // Reset the turn manager to the initial state (e.g., back to teacher's turn)
       this.turnManager.switchTurn();  // Set the turn to teacher
       // Start the Teacher's Turn again
       this.teacherTurn();
+    } else {
+      this.endGameServer(`${this.playerName} says: I finally rest and watch the sun rise on a grateful universe.`);
     }
   }
 
@@ -603,6 +775,7 @@ export class UnderWaterScene extends Scene {
 
   // Generate a valid question based on the current state
   generateValidQuestion(): { ID: number; QUESTION: string; ANSWER: string; SPEECH_ANSWER: string; COLOR: string } {
+
     const validQuestions = QUESTIONS.filter((question) => {
       if (question.ANSWER.includes('Fish')) {
         return this.objectManager.hasFish(question.ANSWER);
