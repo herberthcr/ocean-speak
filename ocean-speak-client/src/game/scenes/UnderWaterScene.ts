@@ -7,7 +7,7 @@ import { UnderWaterObjectManager } from '../managers/UnderWaterObjectManager';
 import { TurnManager } from '../managers/TurnManager';
 import { InputSystem } from '../systems/InputSystem';
 import { ECSWorld } from '../ecs/ECSWorld';
-import { SCREEN, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, SOUNDS, DIFFICULTY, ROLES, AQUATIC_CHARACTERS, PLAYER_COLORS } from '../global/Constants';
+import { SCREEN, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, SOUNDS, DIFFICULTY, ROLES, AQUATIC_CHARACTERS, PLAYER_COLORS, DEFAULT_DIFFICULTY } from '../global/Constants';
 import { useDebugValue } from 'react';
 
 export class UnderWaterScene extends Scene {
@@ -28,6 +28,7 @@ export class UnderWaterScene extends Scene {
   correctAnswersText: Phaser.GameObjects.BitmapText; // To display correct answers
   correctAnswers: number = 0; // Counter for correct answers
   private currentAnswer!: string;
+  private currentSpeech!: string;
   private turnText!: Phaser.GameObjects.BitmapText;
   private countdownText!: Phaser.GameObjects.BitmapText;
   private questionText!: Phaser.GameObjects.BitmapText;
@@ -47,17 +48,19 @@ export class UnderWaterScene extends Scene {
   private currentQuestionColor: string;
   private backButton!: Phaser.GameObjects.Image;
   private playerType: string;
+  private speechRecognitionOn: string = 'off';
 
   constructor() {
     super('UnderWaterScene');
   }
 
-  init(data: { playerName: string, isTeacher: boolean, mode: string, difficulty: string, teacherName: string }) {
+  init(data: { playerName: string, isTeacher: boolean, mode: string, difficulty: string, teacherName: string, speechRecognitionOn: string }) {
     this.playerName = data.playerName;
     this.playerType = data.isTeacher ? ROLES.TEACHER : ROLES.STUDENT;
     this.gameMode = data.mode;
     this.difficulty = data.difficulty;
     this.teacherName = data.teacherName;
+    this.speechRecognitionOn = data.speechRecognitionOn;
   }
 
   create(): void {
@@ -69,8 +72,10 @@ export class UnderWaterScene extends Scene {
 
     this.turnManager = new TurnManager();
 
+    const { maxScore, maxSpeechScore } = this.getMaxScores(this.difficulty);
+    debugger
     // Initialize game state system
-    this.gameStateSystem = new GameStateSystem();
+    this.gameStateSystem = new GameStateSystem(maxScore, maxSpeechScore);
 
     // Initialize input system
     this.inputSystem = new InputSystem(this, this.world, this.gameStateSystem);
@@ -128,9 +133,6 @@ export class UnderWaterScene extends Scene {
       // ONLINE COMING SOON
       this.teacherTurn();
     }
-
-
-
     EventBus.emit('current-scene-ready', this);
   }
 
@@ -138,8 +140,26 @@ export class UnderWaterScene extends Scene {
     this.world.update(delta);
   }
 
-  createInteractiveComponents() {
+  getMaxScores(difficulty: string): { maxScore: number; maxSpeechScore: number} {
+    const difficultyKey = difficulty.toUpperCase() as keyof typeof DIFFICULTY;
+    const selectedDifficulty = DIFFICULTY[difficultyKey];
+    
+    if (selectedDifficulty) {
+      return {
+        maxScore: selectedDifficulty.MAX_SCORE,
+        maxSpeechScore: selectedDifficulty.MAX_SPEECH_SCORE,
+      };
+    }
+    else {
+      debugger
+      return {
+        maxScore: DEFAULT_DIFFICULTY.MAX_SCORE,
+        maxSpeechScore: DEFAULT_DIFFICULTY.MAX_SPEECH_SCORE,
+      }
+    };
+  }
 
+  createInteractiveComponents() {
     // Add UI
     this.interactionText = this.add.bitmapText(20, 35, FONTS.FONTS_KEYS.PIXEL_FONT, 'Interaction: 0', 24)
       .setName('interactionScore')
@@ -174,36 +194,40 @@ export class UnderWaterScene extends Scene {
       .setDepth(300)
       .setVisible(false).setTint(PLAYER_COLORS.TEACHER); // Hidden initially
 
-    // Preload the sprite sheet for the sound icon (assume it has frames 1 to 3)
-    this.soundIcon = this.add.sprite(955, 20, IMAGES.MICS).setOrigin(0).setScale(1.5).setDepth(250);
+    if (this.speechRecognitionOn === 'on') {
+      // Preload the sprite sheet for the sound icon (assume it has frames 1 to 3)
+      this.soundIcon = this.add.sprite(955, 20, IMAGES.MICS).setOrigin(0).setScale(1.5).setDepth(250);
 
-    // Add sound icon animation (from frame 1 to 3)
-    this.anims.create({
-      key: this.soundIconONAnimKey,
-      frames: this.anims.generateFrameNumbers(IMAGES.MICS, { start: 1, end: 1 }),
-      frameRate: 3,
-      repeat: -1  // Loop indefinitely
-    });
+      // Add sound icon animation (from frame 1 to 3)
+      this.anims.create({
+        key: this.soundIconONAnimKey,
+        frames: this.anims.generateFrameNumbers(IMAGES.MICS, { start: 1, end: 1 }),
+        frameRate: 3,
+        repeat: -1  // Loop indefinitely
+      });
 
-    // Add sound icon animation (from frame 1 to 3)
-    this.anims.create({
-      key: this.soundIconOFFAnimKey,
-      frames: this.anims.generateFrameNumbers(IMAGES.MICS, { start: 3, end: 3 }),
-      frameRate: 3,
-      repeat: -1  // Loop indefinitely
-    });
+      // Add sound icon animation (from frame 1 to 3)
+      this.anims.create({
+        key: this.soundIconOFFAnimKey,
+        frames: this.anims.generateFrameNumbers(IMAGES.MICS, { start: 3, end: 3 }),
+        frameRate: 3,
+        repeat: -1  // Loop indefinitely
+      });
 
-    this.soundIcon.anims.play(this.soundIconOFFAnimKey);
+      this.soundIcon.anims.play(this.soundIconOFFAnimKey);
+      this.add.tween({
+        targets: this.soundIcon,
+        scaleX: 1.6,
+        scaleY: 1.6,
+        ease: "Bounce", // 'Cubic', 'Elastic', 'Bounce', 'Back'
+        duration: 1500,
+        repeat: -1, // -1: infinity
+        yoyo: false
+      });
+    }
 
-    this.add.tween({
-      targets: this.soundIcon,
-      scaleX: 1.6,
-      scaleY: 1.6,
-      ease: "Bounce", // 'Cubic', 'Elastic', 'Bounce', 'Back'
-      duration: 1500,
-      repeat: -1, // -1: infinity
-      yoyo: false
-    });
+
+
     this.backButton = this.add.image(SCREEN.WIDTH - 20, SCREEN.HEIGHT - 20, IMAGES.BACK)
       .setOrigin(1)
       .setScale(2)
@@ -237,8 +261,11 @@ export class UnderWaterScene extends Scene {
     if (this.gameOver) return; // Stop if game is over
     // Show a valid question for the student
     const questionData = this.generateValidQuestion();
-    this.soundIcon.anims.play(this.soundIconONAnimKey);
+
+    this.speechRecognitionOn === 'on' && this.soundIcon.anims.play(this.soundIconONAnimKey);
     this.currentAnswer = questionData.ANSWER;
+    this.currentSpeech = questionData.SPEECH_ANSWER;
+
     this.currentQuestionColor = questionData.COLOR;
     this.questionText.setText(`${questionData.QUESTION} - SPEAK: ${questionData.SPEECH_ANSWER}`);
     const colorNumber = parseInt(this.currentQuestionColor.replace("#", ""), 16);
@@ -258,7 +285,11 @@ export class UnderWaterScene extends Scene {
         );
 
       if (clickedObject) {
-        const isCorrect = this.inputSystem.handleInteraction(clickedObject as Phaser.GameObjects.Sprite, this.currentAnswer, gameObjects);
+        const isCorrect = this.inputSystem.handleInteraction(clickedObject as Phaser.GameObjects.Sprite, this.currentAnswer);
+
+        if (this.speechRecognitionOn) {
+          this.inputSystem.handleSpeech(this.currentSpeech);
+        }
         if (isCorrect) {
           this.showQuestionAndHandleInput();  // Show the next question
         }
@@ -270,7 +301,7 @@ export class UnderWaterScene extends Scene {
   }
 
   teacherTurn(): void {
-    debugger
+
     if (this.gameOver) return;  // Stop if game is over
     this.input.enabled = false;  // Disable input during Teacher's Turn
 
@@ -327,7 +358,7 @@ export class UnderWaterScene extends Scene {
 
         if (clickedObject) {
           const isCorrect = this.inputSystem.handleInteraction(clickedObject as Phaser.GameObjects.Sprite, this.currentAnswer, gameObjects);
-          debugger
+
           if (isCorrect) {
             this.input.enabled = false;
             this.questionText.setVisible(false);
@@ -408,7 +439,7 @@ export class UnderWaterScene extends Scene {
           this.updateWaitingMessage(message, 'student');
           this.updateDisplayMessages('student', '');
           this.countdownText.setText(`Play Time ${this.playerName}!`).setTint(PLAYER_COLORS.STUDENT);
-          this.soundIcon.anims.play(this.soundIconONAnimKey);
+          this.speechRecognitionOn === 'on' && this.soundIcon.anims.play(this.soundIconONAnimKey);
           this.time.delayedCall(1500, () => {
             this.countdownText.setVisible(false);
             onComplete();
@@ -423,7 +454,8 @@ export class UnderWaterScene extends Scene {
 
     this.updateWaitingMessage(`Waiting for Teacher ${this.teacherName}...`, 'teacher');
     this.updateDisplayMessages('teacher', turn);
-    this.soundIcon.anims.play(this.soundIconOFFAnimKey);
+
+    this.speechRecognitionOn === 'on' && this.soundIcon.anims.play(this.soundIconOFFAnimKey);
     const wooshSound = this.sound.add(SOUNDS.WOOSH_SOUND);
     wooshSound.play();
     this.tweens.add({
@@ -505,6 +537,7 @@ export class UnderWaterScene extends Scene {
     this.countdownText.setVisible(false);  // Hide countdown
     this.waitingMessageText.setText('');  // Clear the waiting message
     this.input.enabled = true;  // Enable input again
+    this.inputSystem.GameStart();
 
     this.interactionText.setText('Interaction: 0');
     this.speechPointsText.setText('Speech: 0');

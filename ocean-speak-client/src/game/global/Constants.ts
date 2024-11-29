@@ -1,17 +1,54 @@
-// Constants.ts
+export const SCREEN = {
+    WIDTH: 1024,
+    HEIGHT: 768,
+    WATERHEIGHT: 576
+};
 
-export const GAME_RULES = {
-    MAX_SCORE: 10, // Winning condition
-    MAX_SPEECH_SCORE: 10, // Winning condition
-    MAX_PLANT_GROWTH_ACHIEVEMENT: 'Master Gardener! All Plants Fully Grown!',
-    MIN_PLANT_GROWTH_GAME_OVER: 'Ooppps! Plants Wilted!!',
-    ACHIEVEMENTS: {
-        FIVE_INTERACTIONS_STREAK: 'Five Interactions in a Row!. You are the best!',
-        TEN_INTERACTIONS_STREAK: 'Ten Interactions Correct Answers! Osom!',
-        FIVE_SPEECH_STREAK: 'Five Speech Points streak! Amazing!',
-        TEN_SPEECH_STREAK: 'Ten Speech Points streak! You are incredible',
+export const DIFFICULTY = {
+    EASY: {
+        FISH_COUNT: 25,
+        FISH_BANK_COUNT: 1,
+        PLANT_COUNT: 3,
+        FISH_BASE_SPEED: 35,
+        PLANT_SWAY: { MIN: 2000, MAX: 3000 },
+        MAX_SCORE: 5, // Winning condition
+        MAX_SPEECH_SCORE: 3, // Winning condition
+        RULES_MAX_SCORE: '5 Interaction points to win',
+        RULES_MAX_SPEECH_SCORE: '3 Speech points to win',
+    },
+    MEDIUM: {
+        FISH_COUNT: 40,
+        PLANT_COUNT: 7,
+        FISH_BANK_COUNT: 2,
+        FISH_BASE_SPEED: 75,
+        PLANT_SWAY: { MIN: 1500, MAX: 2500 },
+        MAX_SCORE: 10, // Winning condition
+        MAX_SPEECH_SCORE: 5, // Winning condition
+        RULES_MAX_SCORE: '10 Interaction points to win',
+        RULES_MAX_SPEECH_SCORE: '5 Speech points to win',
+    },
+    HARD: {
+        FISH_COUNT: 75,
+        PLANT_COUNT: 10,
+        FISH_BANK_COUNT: 3,
+        FISH_BASE_SPEED: 90,
+        PLANT_SWAY: { MIN: 1000, MAX: 2000 },
+        MAX_SCORE: 15, // Winning condition
+        MAX_SPEECH_SCORE: 10, // Winning condition
+        RULES_MAX_SCORE: '15 Interaction points to win',
+        RULES_MAX_SPEECH_SCORE: '10 Speech points to win',
     },
 };
+
+// Constants.ts
+export const ACHIEVEMENTS = {
+    FIVE_INTERACTIONS_STREAK: 'Five Interactions in a Row!. You are the best!',
+    TEN_INTERACTIONS_STREAK: 'Ten Interactions Correct Answers! Osom!',
+    FIVE_SPEECH_STREAK: 'Five Speech Points streak! Amazing!',
+    TEN_SPEECH_STREAK: 'Ten Speech Points streak! You are incredible',
+    MAX_PLANT_GROWTH_ACHIEVEMENT: 'Master Gardener! All Plants Fully Grown!',
+    MIN_PLANT_GROWTH_GAME_OVER: 'Ooppps! Plants Wilted!!',
+}
 
 export const ASSETS = 'assets';
 
@@ -110,7 +147,9 @@ export const SHADERS = {
 export const FONTS = {
     FONT_SIZE_SMALL: 24,
     FONT_SIZE_MEDIUM: 32,
+    FONT_SIZE_MEDIUM_BIG: 42,
     FONT_SIZE_BIG: 48,
+    FONT_SIZE_VERY_BIG: 64,
     FONTS_KEYS: {
         PIXEL_FONT: 'pixelfont'
     },
@@ -207,40 +246,10 @@ export const PLANTS = {
     },
 };
 
-export const SCREEN = {
-    WIDTH: 1024,
-    HEIGHT: 768,
-    WATERHEIGHT: 576
-};
-
-export const DIFFICULTY = {
-    EASY: {
-        FISH_COUNT: 25,
-        FISH_BANK_COUNT: 1,
-        PLANT_COUNT: 3,
-        FISH_BASE_SPEED: 35,
-        PLANT_SWAY: { MIN: 2000, MAX: 3000 },
-    },
-    MEDIUM: {
-        FISH_COUNT: 40,
-        PLANT_COUNT: 7,
-        FISH_BANK_COUNT: 2,
-        FISH_BASE_SPEED: 75,
-        PLANT_SWAY: { MIN: 1500, MAX: 2500 },
-    },
-    HARD: {
-        FISH_COUNT: 75,
-        PLANT_COUNT: 10,
-        FISH_BANK_COUNT: 3,
-        FISH_BASE_SPEED: 90,
-        PLANT_SWAY: { MIN: 1000, MAX: 2000 },
-    },
-};
-
 export const PLANT_GROWTH = {
-    SCALE_INCREMENT: 0.2, // Growth per correct answer
-    MAX_SCALE: 2.0, // Maximum scale for plants
-    MIN_SCALE: 0.2, // Minimum scale for plants
+    SCALE_INCREMENT: 0.3, // Growth per correct answer
+    MAX_SCALE: 3.0, // Maximum scale for plants
+    MIN_SCALE: 0.3, // Minimum scale for plants
 };
 
 export const DEFAULT_DIFFICULTY = DIFFICULTY.MEDIUM;

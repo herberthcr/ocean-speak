@@ -7,6 +7,14 @@ export class GameStateSystem {
     private speechStreak: number = 0;
     private maxPlantsGrow: number = 0;
     private minPlantsGrow: number = 0;
+    private maxInteractionScore: number;
+    private minInteractionScore: number;
+
+    constructor(maxInteractionScore: number, minInteractionScore: number) {
+        debugger
+        this.maxInteractionScore = maxInteractionScore
+        this.minInteractionScore = minInteractionScore;
+    }
 
     incrementInteractionPoints() {
         this.interactionPoints++;
@@ -30,8 +38,11 @@ export class GameStateSystem {
         }
     }
 
-    resetStreak() {
+    resetInteractionStreak() {
         this.interactionStreak = 0;
+    }
+
+    resetSpeechStreak() {
         this.speechStreak = 0;
     }
 
@@ -59,18 +70,17 @@ export class GameStateSystem {
         this.minPlantsGrow = growSize;
     }
 
-
     resetScores() {
         this.interactionPoints = 0;
         this.speechPoints = 0;
         this.interactionStreak = 0;
-        this.interactionStreak = 0;
+        this.speechStreak = 0;
         this.maxPlantsGrow = 0;
         this.minPlantsGrow = 0;
     }
 
     hasWon(): boolean {
-
-        return this.interactionPoints >= GAME_RULES.MAX_SCORE && this.speechPoints >= GAME_RULES.MAX_SPEECH_SCORE;
+        debugger
+        return this.interactionPoints >= this.maxInteractionScore && this.speechPoints >= this.minInteractionScore;
     }
 }

@@ -3,21 +3,26 @@ import { ECSWorld } from '../ecs/ECSWorld';
 import { GameStateSystem } from './GameStateSystem';
 import { System } from './System';
 import Phaser from 'phaser';
-import { FONTS, SOUNDS, IMAGES, PLANT_GROWTH, GAME_RULES, WRONG_ANSWERS, CORRECT_ANSWERS, PLANTS } from '../global/Constants';
+import { FONTS, SOUNDS, IMAGES, PLANT_GROWTH, ACHIEVEMENTS, GAME_RULES, WRONG_ANSWERS, CORRECT_ANSWERS, PLANTS } from '../global/Constants';
 
 export class InputSystem extends System {
   public scene: Phaser.Scene;
   private gameStateSystem: GameStateSystem;
-
+  private speechRecognitionOn: string ;
+  private gameOver: boolean ;
+  private difficulty: string ;
 
   constructor(scene: Phaser.Scene, world: ECSWorld, gameStateSystem: GameStateSystem) {
     super(world, scene);
     this.scene = scene;
     this.gameStateSystem = gameStateSystem;
+    this.speechRecognitionOn = scene.speechRecognitionOn;
+    this.difficulty = scene.difficulty;
+    this.gameOver = false;
   }
 
 
-  handleInteraction(clickTarget: Phaser.GameObjects.Sprite, correctAnswer: string, gameObject: any) {
+  handleInteraction(clickTarget: Phaser.GameObjects.Sprite, correctAnswer: string) {
     if (!clickTarget) {
       return false; // No interaction occurred
     }
@@ -34,15 +39,19 @@ export class InputSystem extends System {
     this.disableCollisionTemporarily(fishEntityId);
 
     if (isCorrect) {
-
       this.gameStateSystem.incrementInteractionPoints();
-      this.gameStateSystem.incrementSpeechPoints();
+      this.speechRecognitionOn === 'off' && this.gameStateSystem.incrementSpeechPoints();
       this.growPlants(); // Trigger plant growth
     } else {
       this.shrinkPlants(); // Shrink plants on incorrect answer
-      this.gameStateSystem.resetStreak();
+      this.gameStateSystem.resetInteractionStreak();
       this.gameStateSystem.reduceInteractionPoints();
-      this.gameStateSystem.reduceSpeechPoints();
+
+      if (this.speechRecognitionOn === 'off' ) {
+        this.gameStateSystem.reduceSpeechPoints();
+        this.gameStateSystem.resetInteractionStreak();
+      }
+       
     }
 
     this.scene.children.getByName('interactionScore').setText(
@@ -55,7 +64,7 @@ export class InputSystem extends System {
 
     this.checkAchievements();
     this.checkWinCondition();
-    debugger
+    
     return isCorrect;
   }
   private disableCollisionTemporarily(fishEntityId: number): void {
@@ -74,17 +83,21 @@ export class InputSystem extends System {
   }
 
   handleSpeech(correctAnswer: string) {
-    const recognition = new window.SpeechRecognition() || new window.webkitSpeechRecognition();
+    const webSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const recognition = new webSpeechRecognition();
     recognition.lang = 'en-US';
     recognition.start();
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: any) => {
+      debugger
       const transcript = event.results[0][0].transcript.toLowerCase();
-      const isCorrect = transcript.includes(correctAnswer.toLowerCase());
+      let isCorrect = transcript.includes(correctAnswer.toLowerCase());
 
+      if(this.difficulty === 'easy') {isCorrect = true;}
       this.displayFeedback(null, isCorrect, true); // Speech feedback
 
-      if (isCorrect) {
+      if (isCorrect) { 
         this.gameStateSystem.incrementSpeechPoints();
         this.scene.children.getByName('speechScore').setText(
           `Speech: ${this.gameStateSystem.speechPoints}`
@@ -92,13 +105,14 @@ export class InputSystem extends System {
         this.growPlants();
       } else {
         this.shrinkPlants();
-        this.gameStateSystem.resetStreak();
+        this.gameStateSystem.resetSpeechStreak();
       }
 
       this.checkAchievements();
       this.checkWinCondition();
     };
 
+    //if(this.difficulty !== 'easy') {
     recognition.onerror = () => console.error('Speech recognition failed');
     recognition.onend = () => recognition.stop();
   }
@@ -126,7 +140,7 @@ export class InputSystem extends System {
     });
 
     if (allMaxSize && this.gameStateSystem.getMaxPlantsGrow() <= 100) {
-      debugger
+      
       this.gameStateSystem.incrementMaxPlantsGrow(100);
     }
   }
@@ -152,7 +166,7 @@ export class InputSystem extends System {
       });
     });
 
-    debugger
+    
     if (allMinSize && this.gameStateSystem.getMinPlants() >= 0) {
       this.gameStateSystem.incrementMinPlantsGrow(-1);
     }
@@ -168,8 +182,6 @@ export class InputSystem extends System {
         scale: PLANTS.PLANTS_SCALE,
         duration: 300,
       });
-    
-     // plant.setScale(PLANTS.PLANTS_SCALE);
     });
   }
 
@@ -241,26 +253,26 @@ export class InputSystem extends System {
     // Create a list to hold the achievements
     const achievementsToDisplay: string[] = [];
     if (interactionStreak === 5) {
-      achievementsToDisplay.push(GAME_RULES.ACHIEVEMENTS.FIVE_INTERACTIONS_STREAK);
+      achievementsToDisplay.push(ACHIEVEMENTS.FIVE_INTERACTIONS_STREAK);
     }
     if (interactionStreak === 10) {
-      achievementsToDisplay.push(GAME_RULES.ACHIEVEMENTS.TEN_INTERACTIONS_STREAK);
+      achievementsToDisplay.push(ACHIEVEMENTS.TEN_INTERACTIONS_STREAK);
     }
 
     if (speechStreak === 5) {
-      achievementsToDisplay.push(GAME_RULES.ACHIEVEMENTS.FIVE_SPEECH_STREAK);
+      achievementsToDisplay.push(ACHIEVEMENTS.FIVE_SPEECH_STREAK);
     }
     if (speechStreak === 10) {
-      achievementsToDisplay.push(GAME_RULES.ACHIEVEMENTS.TEN_SPEECH_STREAK);
+      achievementsToDisplay.push(ACHIEVEMENTS.TEN_SPEECH_STREAK);
     }
     if (plantsGrow === 100) {
-      debugger
+      
       this.gameStateSystem.incrementMaxPlantsGrow(101);
-      achievementsToDisplay.push(GAME_RULES.MAX_PLANT_GROWTH_ACHIEVEMENT);
+      achievementsToDisplay.push(ACHIEVEMENTS.MAX_PLANT_GROWTH_ACHIEVEMENT);
     }
     if (minplantsGrow === -1) {
       this.gameStateSystem.incrementMinPlantsGrow(-2);
-      achievementsToDisplay.push(GAME_RULES.MIN_PLANT_GROWTH_GAME_OVER);
+      achievementsToDisplay.push(ACHIEVEMENTS.MIN_PLANT_GROWTH_GAME_OVER);
     }
 
     // Display the achievements sequentially with a delay
@@ -312,13 +324,19 @@ export class InputSystem extends System {
   }
 
   checkWinCondition() {
-    debugger
-    if (this.gameStateSystem.hasWon()) {
-      this.endGame(true);
+    if (this.gameStateSystem.hasWon() && !this.gameOver) {
+      debugger
+      this.endGame();
     }
   }
 
+  GameStart() {
+    this.gameOver = true;
+  }
+
+
   endGame() {
+    this.gameOver = true;
     this.scene.sound.play(SOUNDS.FANFARE_SOUND);
     this.playWinEmitter();
     this.resetPlants();

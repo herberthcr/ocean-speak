@@ -23,7 +23,7 @@ export class UnderWaterObjectManager {
     this.world = world;
     this.difficulty = difficulty;
     this.fishSpeed = difficulty.FISH_BASE_SPEED;  // Adjust fish speed based on difficulty
-    debugger
+    
   }
 
 
