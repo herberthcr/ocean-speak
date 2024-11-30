@@ -345,6 +345,29 @@ export class MenuScene extends Scene {
       yoyo: false
     });
 
+    // Add pointerover (mouse enters) and pointerout (mouse leaves) events
+    text.on('pointerover', () => {
+  this.tweens.add({
+      targets: text,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 500,
+      ease: 'Sine.easeInOut',
+      yoyo: true
+  });
+});
+
+text.on('pointerout', () => {
+  this.tweens.add({
+      targets: text,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 500,
+      ease: 'Power1',
+      
+  });
+});
+
 
     text.on(Phaser.Input.Events.POINTER_OVER, () => {
       this.mouseOverSound.play();
