@@ -18,7 +18,7 @@ export class SplashScene extends Scene {
 
     create() {
         this.cameras.main.fadeIn(1000, 0, 150, 200);
-        this.add.image(0, 0, BACKGROUNDS.OCEAN_COMPLETE).setOrigin(0).setPipeline('Light2D');;
+        this.add.image(0, 0, BACKGROUNDS.OCEAN_COMPLETE).setOrigin(0).setPipeline('Light2D');
         this.sunlight = this.lights.addLight(this.cameras.main.centerX / 2.5, 80, 100).setIntensity(3);
         this.lights.enable().setAmbientColor(0xF4E99B);
 

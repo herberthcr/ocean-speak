@@ -210,6 +210,7 @@ export class MenuScene extends Scene {
     this.speechOffText =  this.textHelper.createColoredText(SCREEN.WIDTH / 2 + 100, SCREEN.HEIGHT / 1.23, 200, '32px', 'No', 'blue');
     this.speechOffText.setOrigin(0.5, 1).setDepth(100).setInteractive();
     this.addTextToArray(this.speechOffText);
+    this.AddTextEffect(this.speechOffText);
     this.textHelper.AddAquaticTextEffect(this.speechOffText);
 
     this.playGame = this.textHelper.createColoredText(SCREEN.WIDTH / 2, SCREEN.HEIGHT / 1.05, 200, '64px', 'Start Game', 'blue');
