@@ -13,6 +13,7 @@ This code has been updated for:
 
 
 ![screenshot](splashscreen.png)
+![screenshot](menu.png)
 ![screenshot](screenshot.png)
 
 ## Requirements
