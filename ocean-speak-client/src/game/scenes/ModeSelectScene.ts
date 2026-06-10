@@ -54,12 +54,17 @@ export class ModeSelectScene extends Scene {
             quantity: 50,
         }).setAlpha(0.2);
 
-        this.add.text(cx, 105, 'こもれび', {
-            fontFamily: KANA.FONT_FAMILY, fontSize: '64px', fontStyle: 'bold',
+        // Bilingual title: the hiragana wordmark with its romaji reading underneath.
+        this.add.text(cx, 92, 'こもれび', {
+            fontFamily: KANA.FONT_FAMILY, fontSize: '60px', fontStyle: 'bold',
             color: '#ffffff', stroke: KANA.STROKE, strokeThickness: 8,
         }).setOrigin(0.5);
-        this.add.text(cx, 168, t('pondTitle'), {
-            fontFamily: 'Arial', fontSize: '24px', color: '#9fe7ec',
+        const romajiTitle = this.add.text(cx, 144, 'K O M O R E B I', {
+            fontFamily: 'Arial', fontSize: '21px', fontStyle: 'bold', color: '#ffd479',
+        }).setOrigin(0.5).setAlpha(0.95);
+        romajiTitle.setShadow(0, 2, '#05131f', 4, true, true);
+        this.add.text(cx, 180, t('pondTitle'), {
+            fontFamily: 'Arial', fontSize: '21px', color: '#9fe7ec',
         }).setOrigin(0.5);
 
         const level = progressStore.currentLevel;
