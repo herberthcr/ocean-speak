@@ -90,7 +90,39 @@ export const MENU_STATES = {
 export const SCENES = {
     SPLASH_SCREEN: 'SplashScene',
     MENU: 'MenuScene',
-    UNDERWATER_SCENE: 'UnderWaterScene'
+    UNDERWATER_SCENE: 'UnderWaterScene',
+    TEACH: 'TeachScene',
+    REWARD: 'RewardScene',
+    LESSON: 'LessonScene'
+};
+
+// Komorebi: collectible kana card visuals (ADR-0011 / docs/systems/card-system.md).
+export const CARD = {
+    WIDTH: 150,
+    HEIGHT: 196,
+    BG: 0x123b52,
+    BORDER: 0xffd479,
+    GLYPH_SIZE: '78px',
+    RARITY: 'Común',
+};
+
+// Komorebi: kana glyph styling (Noto Sans JP — ADR-0009) and koi-pond pacing.
+export const KANA = {
+    FONT_FAMILY: 'Noto Sans JP',
+    FONT_SIZE: '40px',
+    FONT_STYLE: 'bold',
+    COLOR: '#ffffff',
+    STROKE: '#10324a',
+    STROKE_THICKNESS: 6,
+    DEPTH: 50,
+};
+
+export const KOI_POND = {
+    START_LEVEL: 1,
+    // Breathing room after a correct tap: let its pronunciation finish before the next prompt
+    // (longer when the "new card" pop is on screen).
+    NEXT_QUESTION_DELAY_MS: 1200,
+    NEXT_QUESTION_DELAY_CARD_MS: 1700,
 };
 
 export const SOUNDS = {

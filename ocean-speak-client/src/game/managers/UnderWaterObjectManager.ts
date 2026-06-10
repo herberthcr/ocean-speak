@@ -3,7 +3,8 @@ import { ECSWorld } from '../ecs/ECSWorld';
 import { Position } from '../components/Position';
 import { Velocity } from '../components/Velocity';
 import { GameObjectComponent } from '../components/GameObjectComponent';
-import { FISH, FISH_ANIMATIONS, DIFFICULTY, PLANTS, SCREEN, PLANTS_ANIMATIONS } from '../global/Constants';
+import { FISH, FISH_ANIMATIONS, DIFFICULTY, PLANTS, SCREEN, PLANTS_ANIMATIONS, KANA } from '../global/Constants';
+import type { KanaItem } from '../../domain/kana-matching';
 
 export class UnderWaterObjectManager {
   private scene: Phaser.Scene;
@@ -16,13 +17,16 @@ export class UnderWaterObjectManager {
   private fishSpeed = 50;
   private createdFish: Set<string> = new Set();  // Tracks created fish by type
   private createdPlants: Set<string> = new Set();  // Tracks created plants by type
+  private createdKana: Set<string> = new Set();   // Komorebi: romaji currently shown on koi
+  private kanaPool: KanaItem[];                    // kana available at the current level
 
 
-  constructor(scene: Phaser.Scene, world: ECSWorld, difficulty: typeof DIFFICULTY.EASY) {
+  constructor(scene: Phaser.Scene, world: ECSWorld, difficulty: typeof DIFFICULTY.EASY, kanaPool: KanaItem[] = []) {
     this.scene = scene;
     this.world = world;
     this.difficulty = difficulty;
     this.fishSpeed = difficulty.FISH_BASE_SPEED;  // Adjust fish speed based on difficulty
+    this.kanaPool = kanaPool;
   }
 
   createPlantsAnimations() {
@@ -177,8 +181,8 @@ export class UnderWaterObjectManager {
           speed: initialSpeed,
         };
 
-        // Assign a name to the sprite
-        sprite.setName(type); // Use the animation key as the name
+        // Komorebi: koi carries a kana glyph; its romaji becomes the sprite name (match key).
+        this.assignKana(sprite);
         // Store the entityId in the sprite for later reference
         sprite.setData('entityId', entityId); // Store the entityId in sprite data
 
@@ -214,8 +218,8 @@ export class UnderWaterObjectManager {
     const speed = Phaser.Math.Between(25, 50) + this.fishSpeed; // Random speed for each fish
     const velocity: Velocity = { vx, vy, speed };
 
-    // Assign a name to the sprite
-    sprite.setName(_animationKey); // Use the animation key as the name
+    // Komorebi: koi carries a kana glyph; its romaji becomes the sprite name (match key).
+    this.assignKana(sprite);
     // Store the entityId in the sprite for later reference
     sprite.setData('entityId', entityId); // Store the entityId in sprite data
 
@@ -345,5 +349,60 @@ export class UnderWaterObjectManager {
   // Check if a specific plant has already been created
   hasPlant(plantType: string): boolean {
     return this.createdPlants.has(plantType);
+  }
+
+  // --- Komorebi: kana on koi -----------------------------------------------------------------
+
+  /** Attach a random kana from the current pool to a koi. */
+  private assignKana(sprite: Phaser.GameObjects.Sprite): void {
+    if (this.kanaPool.length === 0) return;
+    this.assignKanaItem(sprite, Phaser.Math.RND.pick(this.kanaPool));
+  }
+
+  /** Attach a specific kana to a koi: glyph label (Noto) + romaji as the match name. */
+  private assignKanaItem(sprite: Phaser.GameObjects.Sprite, item: KanaItem): void {
+    sprite.setName(item.romaji);
+    const label = this.scene.add.text(sprite.x, sprite.y, item.prompt, {
+      fontFamily: KANA.FONT_FAMILY,
+      fontSize: KANA.FONT_SIZE,
+      fontStyle: KANA.FONT_STYLE,
+      color: KANA.COLOR,
+      stroke: KANA.STROKE,
+      strokeThickness: KANA.STROKE_THICKNESS,
+    }).setOrigin(0.5).setDepth(KANA.DEPTH);
+    sprite.setData('kanaText', label);
+    this.createdKana.add(item.romaji);
+  }
+
+  /** True if at least one koi currently shows this kana (by romaji). */
+  hasKana(romaji: string): boolean {
+    return this.createdKana.has(romaji);
+  }
+
+  /**
+   * Re-label every koi from a new pool. Each `guaranteed` kana (the level's new row) is placed on
+   * at least one koi so the level is always completable; the rest are random from the pool.
+   */
+  reassignKana(fishGroup: Phaser.GameObjects.Group, newPool: KanaItem[], guaranteed: string[] = []): void {
+    this.kanaPool = newPool;
+    this.createdKana.clear();
+    if (newPool.length === 0) return;
+
+    const koi = fishGroup.getChildren();
+    const byRomaji = new Map(newPool.map((i) => [i.romaji, i] as const));
+    const mustAppear = guaranteed
+      .map((r) => byRomaji.get(r))
+      .filter((i): i is KanaItem => Boolean(i));
+
+    const assignments: KanaItem[] = koi.map((_, i) =>
+      i < mustAppear.length ? mustAppear[i] : Phaser.Math.RND.pick(newPool),
+    );
+    Phaser.Utils.Array.Shuffle(assignments);
+
+    koi.forEach((obj, idx) => {
+      const sprite = obj as Phaser.GameObjects.Sprite;
+      (sprite.getData('kanaText') as Phaser.GameObjects.Text | undefined)?.destroy();
+      this.assignKanaItem(sprite, assignments[idx]);
+    });
   }
 }

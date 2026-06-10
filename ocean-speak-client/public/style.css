@@ -2,7 +2,7 @@ body {
     margin: 0;
     padding: 0;
     color: rgba(255, 255, 255, 0.87);
-    background-color: #1c172e;  
+    background-color: #1c172e;
     font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -11,8 +11,240 @@ body {
     height: 100vh;
     overflow: hidden;
     display: flex;
+    gap: 20px;
     justify-content: center;
     align-items: center;
+}
+
+/* Komorebi: target-kana card beside the koi pond (driven by EventBus 'kana-target'). */
+.kana-panel {
+    width: 240px;
+    box-sizing: border-box;
+    padding: 20px 16px;
+    background-color: #0d2a3f;
+    border: 2px solid #39c0c8;
+    border-radius: 16px;
+    text-align: center;
+    color: #eaf6f8;
+    font-family: 'Noto Sans JP', Arial, sans-serif;
+}
+
+.kana-panel__title {
+    margin: 0 0 10px;
+    font-size: 16px;
+    color: #9fe7ec;
+}
+
+.kana-panel__glyph {
+    font-size: 130px;
+    line-height: 1.1;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.kana-panel__audio {
+    margin-top: 10px;
+    padding: 8px 14px;
+    font-size: 16px;
+    color: #052233;
+    background-color: #39c0c8;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.kana-panel__audio:hover {
+    background-color: #5fd6dd;
+}
+
+.kana-panel__romaji {
+    margin: 10px 0 0;
+    font-size: 40px;
+    color: #ffd479;
+}
+
+.kana-panel__level {
+    margin: 10px 0 0;
+    font-size: 14px;
+    color: #8fb3c2;
+}
+
+/* Row tracker: the level's new kana with mastery pips */
+.kana-panel__row {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+}
+
+.row-chip {
+    width: 40px;
+    padding: 4px 2px;
+    border-radius: 8px;
+    background: #0a2030;
+    border: 1px solid #2c4d5e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.row-chip--target {
+    border-color: #39c0c8;
+    background: #14485c;
+}
+
+.row-chip--done {
+    border-color: #ffd479;
+}
+
+.row-chip__glyph {
+    font-size: 20px;
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+.row-chip--done .row-chip__glyph {
+    color: #ffd479;
+}
+
+.row-chip__pips {
+    display: flex;
+    gap: 2px;
+}
+
+.pip {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2c4d5e;
+}
+
+.pip--on {
+    background: #ffd479;
+}
+
+.codex__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.codex__reset {
+    font-size: 14px;
+    color: #ffb4a2;
+    background: transparent;
+    border: 1px solid #8b4513;
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.codex__reset:hover {
+    background: #3a1f14;
+}
+
+.kana-panel__codex {
+    margin-top: 16px;
+    padding: 10px 12px;
+    width: 100%;
+    font-size: 15px;
+    color: #eaf6f8;
+    background-color: #14485c;
+    border: 1px solid #39c0c8;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.kana-panel__codex:hover {
+    background-color: #1b6076;
+}
+
+/* Codex (collection album) modal */
+.codex-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 14, 22, 0.82);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+}
+
+.codex {
+    width: min(880px, 92vw);
+    max-height: 86vh;
+    overflow: auto;
+    background: #0d2a3f;
+    border: 2px solid #39c0c8;
+    border-radius: 16px;
+    padding: 20px 24px 28px;
+}
+
+.codex__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #eaf6f8;
+}
+
+.codex__head h2 {
+    margin: 0;
+    font-size: 22px;
+    color: #ffd479;
+}
+
+.codex__close {
+    font-size: 20px;
+    color: #eaf6f8;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.codex__grid {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+    gap: 10px;
+}
+
+.codex-card {
+    aspect-ratio: 3 / 4;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-family: 'Noto Sans JP', Arial, sans-serif;
+}
+
+.codex-card--owned {
+    background: #123b52;
+    border: 2px solid #ffd479;
+    color: #fff;
+}
+
+.codex-card--locked {
+    background: #0a2030;
+    border: 2px dashed #2c4d5e;
+    color: #2c4d5e;
+    cursor: default;
+}
+
+.codex-card__glyph {
+    font-size: 38px;
+    font-weight: 700;
+}
+
+.codex-card__back {
+    font-size: 20px;
+    color: #ffd479;
+}
+
+.codex-card__lock {
+    font-size: 28px;
 }
 
 .spritePosition {

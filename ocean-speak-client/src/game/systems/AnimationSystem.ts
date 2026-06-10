@@ -37,6 +37,11 @@ export class AnimationSystem extends System {
         this.updatePlants(gameObject, position);
       }
 
+      // Komorebi: keep each koi's kana glyph pinned to the fish (upright; it doesn't rotate).
+      if (gameObject.type === 'fish') {
+        const label = gameObject.sprite.getData('kanaText') as Phaser.GameObjects.Text | undefined;
+        if (label) label.setPosition(gameObject.sprite.x, gameObject.sprite.y);
+      }
     }
   }
 

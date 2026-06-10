@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
 import { BACKGROUNDS, SHADERS, ASSETS, IMAGES, SCENES, FONTS, SOUNDS } from '../global/Constants';
+import { KANA_ITEMS } from '../../data/content';
 
 export class PreloadScene extends Scene {
     constructor() {
@@ -52,11 +53,34 @@ export class PreloadScene extends Scene {
         this.load.audio(SOUNDS.ACHIEVEMENT_SOUND, 'sounds/achievement.mp3');
         this.load.audio(SOUNDS.MOUSE_OVER_SOUND, 'sounds/mouse_over_sound.wav');
         this.load.audio(SOUNDS.MOUSE_CLICK_SOUND, 'sounds/mouse_click_sound.wav');
-        
+
+        // Komorebi: hiragana pronunciation clips (edge-tts, ADR-0008). Keyed by content audio id.
+        KANA_ITEMS.forEach((item) => {
+            this.load.audio(item.audio, `audio/${item.audio}.mp3`);
+        });
     }
 
     create() {
         this.input.setDefaultCursor('url(assets/cursor.png), pointer');  // Custom cursor for student
-        this.scene.start(SCENES.SPLASH_SCREEN);
+
+        // M1a launches straight into the Escriba's koi pond (solo mode); Splash/Menu return with
+        // the overworld in M1c. Gate on the JP font so kana render crisp from the first frame.
+        const startPond = () => this.scene.start(SCENES.UNDERWATER_SCENE, {
+            playerName: 'Aprendiz',
+            isTeacher: false,
+            mode: 'solo',
+            difficulty: 'easy',
+            teacherName: '',
+            speechRecognitionOn: 'off',
+        });
+
+        if (document.fonts?.load) {
+            Promise.all([
+                document.fonts.load('400 44px "Noto Sans JP"'),
+                document.fonts.load('700 44px "Noto Sans JP"'),
+            ]).then(() => startPond()).catch(() => startPond());
+        } else {
+            startPond();
+        }
     }
 }

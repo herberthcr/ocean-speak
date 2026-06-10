@@ -8,8 +8,11 @@ import { TurnManager } from '../managers/TurnManager';
 import { InputSystem } from '../systems/InputSystem';
 import { ECSWorld } from '../ecs/ECSWorld';
 import { TextHelper } from '../global/TextHelper'
-import { SCREEN, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, FISH_ANIMATIONS, PLANTS_ANIMATIONS, SOUNDS, DIFFICULTY, ROLES, AQUATIC_CHARACTERS, COLOR_THEMES, PLAYER_COLORS, DEFAULT_DIFFICULTY } from '../global/Constants';
+import { SCREEN, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, FISH_ANIMATIONS, PLANTS_ANIMATIONS, SOUNDS, DIFFICULTY, ROLES, AQUATIC_CHARACTERS, COLOR_THEMES, PLAYER_COLORS, DEFAULT_DIFFICULTY, SCENES, KOI_POND, KANA } from '../global/Constants';
 import { useDebugValue } from 'react';
+import { poolForLevel, levelConfig, MAX_LEVEL, itemByRomaji, type Level } from '../../data/content';
+import type { KanaItem } from '../../domain/kana-matching';
+import { progressStore } from '../../state/progressStore';
 
 import { TeacherClient } from '../client/TeacherClient'
 
@@ -47,6 +50,11 @@ export class UnderWaterScene extends Scene {
   private backButton!: Phaser.GameObjects.Image;
   private playerType: string;
   private speechRecognitionOn: string = 'off';
+  // Komorebi koi pond
+  private currentLevel: number = KOI_POND.START_LEVEL;
+  private mode: 'relax' | 'time' = 'relax';
+  private questionTimer?: Phaser.Time.TimerEvent;
+  private pondInputReady: boolean = false;
   // Text
   private textHelper!: TextHelper;
   private interactionText!: Phaser.GameObjects.Text;
@@ -79,7 +87,11 @@ export class UnderWaterScene extends Scene {
 
     this.turnManager = new TurnManager();
 
-    const { maxScore, maxSpeechScore } = this.getMaxScores(this.difficulty);
+    // Komorebi koi pond is calm (ADR-0016): no abrupt game-over. Solo runs effectively endless;
+    // charging the crystal is the reward, not a score race.
+    const { maxScore, maxSpeechScore } = this.gameMode === 'solo'
+      ? { maxScore: Number.MAX_SAFE_INTEGER, maxSpeechScore: Number.MAX_SAFE_INTEGER }
+      : this.getMaxScores(this.difficulty);
 
     // Initialize game state system
     this.gameStateSystem = new GameStateSystem(maxScore, maxSpeechScore);
@@ -119,7 +131,8 @@ export class UnderWaterScene extends Scene {
     this.plantGroup = this.add.group(); // Create plant group
 
     // Create the object underwater manager used to create the game objects, passing the difficulty configuration
-    this.objectManager = new UnderWaterObjectManager(this, this.world, DIFFICULTY[this.difficulty.toUpperCase()]);
+    // plus the kana pool for the current level (koi are labelled with these kana).
+    this.objectManager = new UnderWaterObjectManager(this, this.world, DIFFICULTY[this.difficulty.toUpperCase()], poolForLevel(this.currentLevel));
 
     // Creat Animations
     this.objectManager.createFishAnimations();
@@ -133,7 +146,6 @@ export class UnderWaterScene extends Scene {
 
     this.createInteractiveComponents();
 
-    debugger
     if (this.gameMode === 'solo') {
       this.startSoloMode();
     }
@@ -342,7 +354,7 @@ export class UnderWaterScene extends Scene {
     this.textHelper.AddAquaticTextEffect(this.speechPointsText)
 
     this.questionText = this.textHelper.createColoredText(this.cameras.main.centerX, 600, 200, '24px', '', 'pink');
-    this.questionText.setName('questionText').setOrigin(0.5);
+    this.questionText.setName('questionText').setOrigin(0.5).setFontFamily(KANA.FONT_FAMILY).setFontSize(36);
     this.textHelper.AddAquaticTextEffect(this.questionText);
 
     this.turnText = this.textHelper.createColoredText(this.cameras.main.centerX, 20, 200, '24px', '', 'yellow');
@@ -421,12 +433,252 @@ export class UnderWaterScene extends Scene {
   }
 
   startSoloMode(): void {
-    // In solo mode, skip teacher turn and directly start the student's turn.
-    const turnText = `Student: ${this.playerName}`;
-    this.updateTurnText(turnText);
-    this.updateWaitingMessage('Play Time! Speech Time!');
+    // Komorebi: enter the Escriba's koi pond — calm recognition by click.
+    // Level flow (ADR-0018): LESSON (row intro) → PLAY (×N per kana) → REWARD (cards).
+    this.currentLevel = progressStore.currentLevel;
+    this.updateTurnText('Cabaña del Escriba');
     this.textHelper.updateTextColor(this.turnText, 'yellow');
-    this.showQuestionAndHandleInput();
+    this.interactionText.setVisible(false); // legacy HUD; progress lives in the side panel
+    this.registerPondInput();
+    this.beginLevel(false);
+  }
+
+  // Level entry ritual: optional camera fade, fresh koi labels (new row guaranteed on the pond),
+  // then the row lesson. Play resumes when the lesson closes.
+  private beginLevel(withFade: boolean): void {
+    this.input.enabled = false;
+    this.currentAnswer = '';
+    this.questionText.setText('');
+    this.clearQuestionTimer();
+
+    const cfg = levelConfig(this.currentLevel);
+    const relabel = () => {
+      this.objectManager.reassignKana(this.fishGroup, poolForLevel(this.currentLevel), cfg.adds);
+      this.announceLevel();
+    };
+
+    if (withFade) {
+      this.cameras.main.fadeOut(300, 5, 19, 31);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        relabel();
+        this.cameras.main.fadeIn(300, 5, 19, 31);
+        this.cameras.main.once('camerafadeincomplete', () => this.openLesson(cfg));
+      });
+    } else {
+      relabel();
+      this.openLesson(cfg);
+    }
+  }
+
+  // The pond keeps animating behind the lesson (only its input is disabled, no pause).
+  private openLesson(cfg: Level): void {
+    const items = cfg.adds
+      .map((r) => itemByRomaji(r))
+      .filter((i): i is KanaItem => Boolean(i));
+    this.scene.launch(SCENES.LESSON, { level: cfg.level, label: cfg.label, items });
+    this.events.once('lesson-done', () => {
+      cfg.adds.forEach((r) => progressStore.markTaught(r)); // the lesson IS the teach-first beat
+      this.input.enabled = true;
+      this.nextKanaQuestion();
+    });
+  }
+
+  private repeatLevel(): void {
+    progressStore.resetMasteryFor(levelConfig(this.currentLevel).adds);
+    this.beginLevel(true);
+  }
+
+  // Mirror the new row's mastery pips to the HTML side panel.
+  private emitRowProgress(): void {
+    const cfg = levelConfig(this.currentLevel);
+    EventBus.emit('row-progress', {
+      level: cfg.level,
+      label: cfg.label,
+      threshold: cfg.correctPerKana,
+      row: cfg.adds.map((r) => ({
+        prompt: itemByRomaji(r)?.prompt ?? r,
+        romaji: r,
+        mastery: Math.min(progressStore.masteryOf(r), cfg.correctPerKana),
+        isTarget: r === this.currentAnswer,
+      })),
+    });
+  }
+
+  // Register the koi click handler exactly once (reused across questions and levels).
+  private registerPondInput(): void {
+    if (this.pondInputReady) return;
+    this.pondInputReady = true;
+
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.gameOver || !this.canClick || !this.currentAnswer) return;
+      this.canClick = false;
+
+      const clicked =
+        this.fishGroup.getChildren().find((obj) =>
+          (obj as Phaser.GameObjects.Sprite).getBounds().contains(pointer.x, pointer.y)) ||
+        this.plantGroup.getChildren().find((obj) =>
+          (obj as Phaser.GameObjects.Sprite).getBounds().contains(pointer.x, pointer.y));
+
+      if (clicked) {
+        const isCorrect = this.inputSystem.handleInteraction(clicked as Phaser.GameObjects.Sprite, this.currentAnswer);
+        if (isCorrect) this.onCorrectAnswer();
+      }
+
+      this.time.delayedCall(this.clickCooldownTime, () => { this.canClick = true; });
+    });
+  }
+
+  // Correct taps needed to master a kana (and earn its card) at the current level.
+  private threshold(): number {
+    return levelConfig(this.currentLevel).correctPerKana;
+  }
+
+  // Next kana to ask: a not-yet-mastered kana from this level's new row that is on a koi.
+  // Null when every new-row kana is mastered (the level is complete).
+  private pickTarget(): KanaItem | null {
+    const th = this.threshold();
+    const candidates = levelConfig(this.currentLevel).adds
+      .filter((r) => progressStore.masteryOf(r) < th && this.objectManager.hasKana(r))
+      .map((r) => itemByRomaji(r))
+      .filter((i): i is KanaItem => Boolean(i));
+    return candidates.length ? Phaser.Math.RND.pick(candidates) : null;
+  }
+
+  private nextKanaQuestion(): void {
+    if (this.gameOver) return;
+    this.clearQuestionTimer();
+
+    const item = this.pickTarget();
+    if (!item) { this.onLevelComplete(); return; }
+    this.currentAnswer = item.romaji;
+
+    if (!progressStore.isTaught(item.romaji)) {
+      this.input.enabled = false;          // hand off to the teach overlay
+      this.scene.pause();
+      this.scene.launch(SCENES.TEACH, { item });
+      this.events.once('teach-done', (taughtItem: KanaItem) => {
+        progressStore.markTaught(taughtItem.romaji);
+        this.presentQuestion(item);
+      });
+    } else {
+      this.presentQuestion(item);
+    }
+  }
+
+  // Show "Toca <kana>", play its pronunciation, mirror it to the HTML card, and (in Time mode)
+  // start the per-question countdown.
+  private presentQuestion(item: KanaItem): void {
+    if (this.gameOver) return;
+    this.input.enabled = true;
+
+    EventBus.emit('kana-target', {
+      prompt: item.prompt,
+      romaji: item.romaji,
+      audio: item.audio,
+      level: this.currentLevel,
+      label: levelConfig(this.currentLevel).label,
+    });
+
+    this.questionText.setText(`Toca  ${item.prompt}`);
+    this.textHelper.updateTextColor(this.questionText, 'pink');
+    this.questionText.setVisible(true);
+    this.emitRowProgress();
+
+    if (this.cache.audio.exists(item.audio)) {
+      this.sound.play(item.audio);
+    }
+
+    const limit = levelConfig(this.currentLevel).timeLimitMs;
+    if (this.mode === 'time' && limit > 0) {
+      this.questionTimer = this.time.delayedCall(limit, () => this.onQuestionTimeout());
+    }
+  }
+
+  private onCorrectAnswer(): void {
+    this.clearQuestionTimer();
+
+    const romaji = this.currentAnswer;
+    this.currentAnswer = ''; // no question pending: ignore taps until the next prompt
+    const awarded = progressStore.recordCorrect(romaji, this.threshold());
+    this.emitRowProgress();
+    if (awarded) {
+      const item = itemByRomaji(romaji);
+      if (item) this.popCard(item);
+    }
+
+    // Pause so the tapped kana's pronunciation (and the card pop) finish before what follows.
+    if (progressStore.levelComplete(levelConfig(this.currentLevel).adds, this.threshold())) {
+      this.time.delayedCall(awarded ? 1400 : 900, () => this.onLevelComplete());
+    } else {
+      this.time.delayedCall(
+        awarded ? KOI_POND.NEXT_QUESTION_DELAY_CARD_MS : KOI_POND.NEXT_QUESTION_DELAY_MS,
+        () => this.nextKanaQuestion(),
+      );
+    }
+  }
+
+  // Time mode: a timeout carries no penalty (pedagogy) — just re-pose.
+  private onQuestionTimeout(): void {
+    if (this.gameOver) return;
+    this.nextKanaQuestion();
+  }
+
+  // Level cleared: pause and show the reward (cards earned); advance on "Siguiente nivel".
+  private onLevelComplete(): void {
+    if (this.gameOver) return;
+    this.clearQuestionTimer();
+    const cfg = levelConfig(this.currentLevel);
+    const isLast = this.currentLevel >= MAX_LEVEL;
+
+    this.input.enabled = false;
+    this.scene.pause();
+    this.scene.launch(SCENES.REWARD, { level: cfg.level, label: cfg.label, cards: cfg.adds, isLast });
+    this.events.once('reward-done', (opts?: { repeat?: boolean }) => {
+      if (opts?.repeat) {
+        this.repeatLevel();
+      } else {
+        this.advanceLevel(isLast);
+      }
+    });
+  }
+
+  private advanceLevel(isLast: boolean): void {
+    if (isLast) {
+      this.input.enabled = true;
+      this.currentAnswer = '';
+      this.questionText.setText('¡Completaste el hiragana! 🎉');
+      this.updateWaitingMessage('Colección de hiragana completa', 'student');
+      return;
+    }
+    this.currentLevel += 1;
+    progressStore.setLevel(this.currentLevel);
+    this.beginLevel(true);
+  }
+
+  // Brief "new card!" flourish when a kana is mastered.
+  private popCard(item: KanaItem): void {
+    const card = this.add.container(this.cameras.main.centerX, 200).setDepth(400);
+    const bg = this.add.rectangle(0, 0, 120, 156, 0x123b52).setStrokeStyle(3, 0xffd479);
+    const glyph = this.add.text(0, -16, item.prompt, {
+      fontFamily: KANA.FONT_FAMILY, fontSize: '60px', color: '#ffffff', stroke: KANA.STROKE, strokeThickness: 4,
+    }).setOrigin(0.5);
+    const tag = this.add.text(0, 52, '¡Carta nueva!', {
+      fontFamily: 'Arial', fontSize: '14px', color: '#ffd479',
+    }).setOrigin(0.5);
+    card.add([bg, glyph, tag]);
+    card.setScale(0.5).setAlpha(0);
+    this.tweens.add({ targets: card, scale: 1, alpha: 1, duration: 300, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: card, alpha: 0, y: 150, delay: 1100, duration: 500, onComplete: () => card.destroy() });
+  }
+
+  private announceLevel(): void {
+    const cfg = levelConfig(this.currentLevel);
+    this.updateWaitingMessage(`Nivel ${cfg.level} — ${cfg.label}`, 'student');
+  }
+
+  private clearQuestionTimer(): void {
+    this.questionTimer?.remove();
+    this.questionTimer = undefined;
   }
 
   showQuestionAndHandleInput(): void {

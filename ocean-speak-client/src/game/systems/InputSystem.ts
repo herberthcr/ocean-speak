@@ -5,6 +5,8 @@ import { System } from './System';
 import Phaser from 'phaser';
 import { TextHelper } from '../global/TextHelper'
 import { FONTS, SOUNDS, IMAGES, PLANT_GROWTH, ACHIEVEMENTS, GAME_RULES, WRONG_ANSWERS, CORRECT_ANSWERS, PLANTS } from '../global/Constants';
+import { nextCrystalScale } from '../../domain/crystal';
+import { itemByRomaji } from '../../data/content';
 
 export class InputSystem extends System {
   public scene: Phaser.Scene;
@@ -21,35 +23,32 @@ export class InputSystem extends System {
   }
 
   handleInteraction(clickTarget: Phaser.GameObjects.Sprite, correctAnswer: string) {
-    debugger
     if (!clickTarget) {
       return false; // No interaction occurred
     }
     const isCorrect = clickTarget.name === correctAnswer;
 
-    // Display feedback
-    this.displayFeedback(clickTarget, isCorrect);
+    // Display feedback: on a correct tap, reinforce with the kana's pronunciation + its romaji.
+    const item = isCorrect ? itemByRomaji(clickTarget.name) : undefined;
+    this.displayFeedback(clickTarget, isCorrect, false, item?.romaji, item?.audio);
 
     // Get the entityId from the sprite's custom data
     const fishEntityId = clickTarget.getData('entityId');
 
     // Call the method to disable collision temporarily
     this.disableCollisionTemporarily(fishEntityId);
- debugger
+
     if (isCorrect) {
       this.gameStateSystem.incrementInteractionPoints();
       this.scene.speechRecognitionOn === 'off' && this.gameStateSystem.incrementSpeechPoints();
-      this.growPlants(); // Trigger plant growth
+      this.growPlants(); // Charge the crystal
     } else {
-      this.shrinkPlants(); // Shrink plants on incorrect answer
+      // Práctica calmada: el error solo reinicia la racha; NO descarga el cristal ni resta puntos
+      // (ADR-0006 / contrato de mini-juego: solo el Artefacto baja el cristal).
       this.gameStateSystem.resetInteractionStreak();
-      this.gameStateSystem.reduceInteractionPoints();
-
       if (this.scene.speechRecognitionOn === 'off') {
-        this.gameStateSystem.reduceSpeechPoints();
-        this.gameStateSystem.resetInteractionStreak();
+        this.gameStateSystem.resetSpeechStreak();
       }
-
     }
 
     this.scene.interactionText.setText(`Interaction: ${this.gameStateSystem.interactionPoints}`);
@@ -117,7 +116,7 @@ export class InputSystem extends System {
 
     plantGroup.getChildren().forEach((plant: Phaser.GameObjects.Sprite) => {
 
-      const newScale = Math.min(plant.scale + PLANT_GROWTH.SCALE_INCREMENT, PLANT_GROWTH.MAX_SCALE);
+      const newScale = nextCrystalScale(plant.scale, true); // charge crystal (pure logic, capped at MAX)
 
       if (newScale < PLANT_GROWTH.MAX_SCALE) {
 
@@ -177,18 +176,22 @@ export class InputSystem extends System {
     });
   }
 
-  displayFeedback(target: Phaser.GameObjects.Sprite | null, isCorrect: boolean, isSpeech = false) {
+  displayFeedback(target: Phaser.GameObjects.Sprite | null, isCorrect: boolean, isSpeech = false, kanaLabel?: string, kanaAudio?: string) {
     const x = target ? target.x : this.scene.cameras.main.centerX;
     const y = target ? target.y - 20 : this.scene.cameras.main.centerY;
+
+    // On a correct tap show the kana's reading (romaji); otherwise a gentle "try again".
+    const message = isCorrect
+      ? (kanaLabel ?? Phaser.Math.RND.pick(Object.values(CORRECT_ANSWERS)))
+      : Phaser.Math.RND.pick(Object.values(WRONG_ANSWERS));
 
     const feedbackText = this.scene.add.bitmapText(
       x,
       y,
       FONTS.FONTS_KEYS.PIXEL_FONT,
-
-      isCorrect ? Phaser.Math.RND.pick(Object.values(CORRECT_ANSWERS)) : Phaser.Math.RND.pick(Object.values(WRONG_ANSWERS)),
-      32
-    ).setOrigin(0.5).setDepth(300);;
+      message,
+      isCorrect && kanaLabel ? 56 : 32
+    ).setOrigin(0.5).setDepth(300);
 
 
     feedbackText.setTint(isCorrect ? 0xffffff : 0xff0000); // Green for correct, red for incorrect
@@ -229,7 +232,12 @@ export class InputSystem extends System {
     }
 
     if (isCorrect) {
-      this.scene.sound.play(SOUNDS.CORRECT_SOUND);
+      // Reinforce with the kana's own pronunciation; fall back to the generic chime.
+      if (kanaAudio && this.scene.cache.audio.exists(kanaAudio)) {
+        this.scene.sound.play(kanaAudio);
+      } else {
+        this.scene.sound.play(SOUNDS.CORRECT_SOUND);
+      }
     } else {
       this.scene.sound.play(SOUNDS.INCORRECT_SOUND);
     }
