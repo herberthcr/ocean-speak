@@ -68,6 +68,7 @@ export class UnderWaterScene extends Scene {
   private budgetBarBg?: Phaser.GameObjects.Rectangle;
   private budgetBarFill?: Phaser.GameObjects.Rectangle;
   private pondInputReady: boolean = false;
+  private lastTargetRomaji?: string; // avoid asking the same kana back-to-back
   // M1b: optional ja-JP voice input (ADR-0010). Click always remains the fallback.
   private voiceOn: boolean = false;
   private recognition?: SpeechRecognition;
@@ -910,6 +911,10 @@ export class UnderWaterScene extends Scene {
   private pickTarget(): { item: KanaItem; review: boolean } | null {
     const th = this.threshold();
     const cfg = levelConfig(this.currentLevel);
+    // Avoid asking the same kana twice in a row when there's an alternative (Ko, Ko → Ko, Ke).
+    const notLast = (list: KanaItem[]) =>
+      list.length > 1 ? list.filter((i) => i.romaji !== this.lastTargetRomaji) : list;
+
     const rowCandidates = cfg.adds
       .filter((r) => progressStore.masteryOf(r) < th && this.objectManager.hasKana(r))
       .map((r) => itemByRomaji(r))
@@ -922,9 +927,9 @@ export class UnderWaterScene extends Scene {
       .map((r) => itemByRomaji(r))
       .filter((i): i is KanaItem => Boolean(i));
     if (reviewPool.length > 0 && Phaser.Math.RND.frac() < KOI_POND.REVIEW_CHANCE) {
-      return { item: Phaser.Math.RND.pick(reviewPool), review: true };
+      return { item: Phaser.Math.RND.pick(notLast(reviewPool)), review: true };
     }
-    return { item: Phaser.Math.RND.pick(rowCandidates), review: false };
+    return { item: Phaser.Math.RND.pick(notLast(rowCandidates)), review: false };
   }
 
   private nextKanaQuestion(): void {
@@ -935,6 +940,7 @@ export class UnderWaterScene extends Scene {
     if (!target) { this.onLevelComplete(); return; }
     const { item, review } = target;
     this.currentAnswer = item.romaji;
+    this.lastTargetRomaji = item.romaji;
 
     if (!progressStore.isTaught(item.romaji)) {
       this.input.enabled = false;          // hand off to the teach overlay
@@ -1009,8 +1015,12 @@ export class UnderWaterScene extends Scene {
     rec.maxAlternatives = 5;
     let fatal = false;
 
+    // Per-utterance state, so onend can guarantee feedback even if no final result fired.
+    let decided = false;
+    let lastHeard = '';
+
     rec.onstart = () => {
-      if (this.recognition === rec) EventBus.emit('voice-listening', true);
+      if (this.recognition === rec) { decided = false; lastHeard = ''; EventBus.emit('voice-listening', true); }
     };
     // Megaphone lights up while the player is actually speaking.
     rec.onspeechstart = () => { if (this.recognition === rec) EventBus.emit('voice-speaking', true); };
@@ -1030,8 +1040,10 @@ export class UnderWaterScene extends Scene {
         }
       }
       heard = heard.trim();
+      if (heard) lastHeard = heard;
 
       if (matched) {
+        decided = true;
         EventBus.emit('voice-heard', '');
         EventBus.emit('voice-speaking', false);
         this.collectAllMatching(item);
@@ -1041,6 +1053,7 @@ export class UnderWaterScene extends Scene {
 
       if (hasFinal && heard) {
         // A complete utterance that didn't match → clear "didn't get it" feedback (no penalty).
+        decided = true;
         EventBus.emit('voice-miss', heard);
         this.sound.play(SOUNDS.INCORRECT_SOUND);
         this.streak = 0;
@@ -1062,6 +1075,17 @@ export class UnderWaterScene extends Scene {
     rec.onend = () => {
       if (!fatal && this.voiceOn && this.recognition === rec
         && this.currentAnswer === item.romaji && !this.gameOver) {
+        // Backstop: the session ended without a verdict. If we heard something, mark it a miss;
+        // if total silence, hint "didn't catch that" — so every attempt gets clear feedback.
+        if (!decided) {
+          if (lastHeard) {
+            EventBus.emit('voice-miss', lastHeard);
+            this.sound.play(SOUNDS.INCORRECT_SOUND);
+            this.streak = 0;
+          } else {
+            EventBus.emit('voice-nohear', true);
+          }
+        }
         // Re-arm for the next utterance after a short beat (avoids a tight loop on instant ends).
         this.time.delayedCall(150, () => {
           if (this.recognition === rec && this.currentAnswer === item.romaji && this.voiceOn && !this.gameOver) {

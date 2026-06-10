@@ -56,7 +56,7 @@ function App() {
     const [voiceListening, setVoiceListening] = useState(false);
     const [voiceSpeaking, setVoiceSpeaking] = useState(false);
     const [voiceHeard, setVoiceHeard] = useState('');
-    const [voiceMiss, setVoiceMiss] = useState<{ text: string; id: number } | null>(null);
+    const [voiceMiss, setVoiceMiss] = useState<{ text: string; id: number; nohear?: boolean } | null>(null);
     const [voiceDenied, setVoiceDenied] = useState(false);
     const missId = useRef(0);
     // Re-render the panel when the language changes (toggle lives in the Phaser menu).
@@ -78,6 +78,7 @@ function App() {
         const onSpeaking = (on: boolean) => setVoiceSpeaking(on);
         const onHeard = (txt: string) => { setVoiceHeard(txt); if (txt) setVoiceMiss(null); };
         const onMiss = (txt: string) => { missId.current += 1; setVoiceMiss({ text: txt, id: missId.current }); setVoiceHeard(''); setVoiceSpeaking(false); };
+        const onNoHear = () => { missId.current += 1; setVoiceMiss({ text: '', id: missId.current, nohear: true }); setVoiceHeard(''); setVoiceSpeaking(false); };
         const onDenied = () => { setVoiceDenied(true); setVoiceOn(false); resetVoice(); };
         const onLang = (l: Lang) => setLang(l);
         EventBus.on('kana-target', onTarget);
@@ -89,6 +90,7 @@ function App() {
         EventBus.on('voice-speaking', onSpeaking);
         EventBus.on('voice-heard', onHeard);
         EventBus.on('voice-miss', onMiss);
+        EventBus.on('voice-nohear', onNoHear);
         EventBus.on('voice-denied', onDenied);
         EventBus.on('lang-changed', onLang);
         return () => {
@@ -101,6 +103,7 @@ function App() {
             EventBus.off('voice-speaking', onSpeaking);
             EventBus.off('voice-heard', onHeard);
             EventBus.off('voice-miss', onMiss);
+            EventBus.off('voice-nohear', onNoHear);
             EventBus.off('voice-denied', onDenied);
             EventBus.off('lang-changed', onLang);
         };
@@ -227,7 +230,7 @@ function App() {
                                 <span className="voice-feedback__label">{t('listening')}</span>
                                 {voiceMiss ? (
                                     <span key={voiceMiss.id} className="voice-feedback__heard voice-feedback__heard--miss">
-                                        ✗ 「{voiceMiss.text}」
+                                        {voiceMiss.nohear ? t('voiceNoHeard') : `✗ 「${voiceMiss.text}」`}
                                     </span>
                                 ) : voiceHeard ? (
                                     <span className="voice-feedback__heard">「{voiceHeard}」</span>
