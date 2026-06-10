@@ -130,11 +130,11 @@ export const KOI_POND = {
     // Interleaved review (SRS-lite): chance that a question re-asks a mastered kana from an
     // earlier row instead of the current one.
     REVIEW_CHANCE: 0.2,
-    // Time mode: one persistent budget for the whole level. It drains continuously; hits add
-    // time (capped), misses subtract it. Reaching zero refills the bar but costs the star run.
+    // Time mode: one persistent budget for the whole level. The bar starts FULL (START_MS is
+    // also the cap), drains continuously, hits add time, misses subtract it. Reaching zero
+    // refills the bar but costs the star run.
     TIME_BUDGET: {
         START_MS: 60000,
-        MAX_MS: 75000,
         HIT_BONUS_MS: 2500,
         MISS_PENALTY_MS: 5000,
     },

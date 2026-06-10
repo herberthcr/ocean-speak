@@ -1075,7 +1075,7 @@ export class UnderWaterScene extends Scene {
 
   private updateBudgetBar(): void {
     if (!this.budgetBarFill) return;
-    const frac = Phaser.Math.Clamp(this.budgetLeftMs / KOI_POND.TIME_BUDGET.MAX_MS, 0, 1);
+    const frac = Phaser.Math.Clamp(this.budgetLeftMs / KOI_POND.TIME_BUDGET.START_MS, 0, 1);
     this.budgetBarFill.setScale(frac, 1);
     this.budgetBarFill.setFillStyle(frac > 0.45 ? 0x39c0c8 : frac > 0.2 ? 0xffd479 : 0xff6b6b);
   }
@@ -1104,11 +1104,11 @@ export class UnderWaterScene extends Scene {
     this.streak++;
     this.showStreak();
 
-    // Time mode: a hit buys time (capped). The clock keeps running — it's one level-wide run.
+    // Time mode: a hit buys time (capped at full). The clock keeps running — one level-wide run.
     if (this.mode === 'time') {
       this.budgetLeftMs = Math.min(
         this.budgetLeftMs + KOI_POND.TIME_BUDGET.HIT_BONUS_MS,
-        KOI_POND.TIME_BUDGET.MAX_MS,
+        KOI_POND.TIME_BUDGET.START_MS,
       );
       this.updateBudgetBar();
     }
@@ -1145,7 +1145,7 @@ export class UnderWaterScene extends Scene {
     let stars = 0;
     if (this.mode === 'time') {
       this.budgetRunning = false;
-      const frac = this.budgetLeftMs / KOI_POND.TIME_BUDGET.MAX_MS;
+      const frac = this.budgetLeftMs / KOI_POND.TIME_BUDGET.START_MS;
       stars = this.budgetExpiries > 0 ? 1 : frac >= 0.45 ? 3 : frac >= 0.18 ? 2 : 1;
       progressStore.setLevelStars(cfg.level, stars);
     }
