@@ -11,7 +11,7 @@ import { TextHelper } from '../global/TextHelper'
 import { SCREEN, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, FISH_ANIMATIONS, PLANTS_ANIMATIONS, SOUNDS, DIFFICULTY, ROLES, AQUATIC_CHARACTERS, COLOR_THEMES, PLAYER_COLORS, DEFAULT_DIFFICULTY, SCENES, KOI_POND, KANA } from '../global/Constants';
 import { useDebugValue } from 'react';
 import { poolForLevel, levelConfig, MAX_LEVEL, itemByRomaji, type Level } from '../../data/content';
-import type { KanaItem } from '../../domain/kana-matching';
+import { matchesSpeech, type KanaItem } from '../../domain/kana-matching';
 import { progressStore } from '../../state/progressStore';
 
 import { TeacherClient } from '../client/TeacherClient'
@@ -57,6 +57,9 @@ export class UnderWaterScene extends Scene {
   private timeBar?: Phaser.GameObjects.Rectangle;
   private levelTimeouts: number = 0;
   private pondInputReady: boolean = false;
+  // M1b: optional ja-JP voice input (ADR-0010). Click always remains the fallback.
+  private voiceOn: boolean = false;
+  private recognition?: SpeechRecognition;
   // Text
   private textHelper!: TextHelper;
   private interactionText!: Phaser.GameObjects.Text;
@@ -444,6 +447,24 @@ export class UnderWaterScene extends Scene {
     this.textHelper.updateTextColor(this.turnText, 'yellow');
     this.interactionText.setVisible(false); // legacy HUD; progress lives in the side panel
 
+    // Voice toggle from the side panel (ADR-0010: optional, click always works). Each pond
+    // entry starts click-only; the panel mirrors that via `voice-state`.
+    const onVoiceToggle = (on: boolean) => {
+      this.voiceOn = on && this.mode !== 'free';
+      if (!this.voiceOn) {
+        this.stopVoiceListening();
+      } else if (this.currentAnswer) {
+        const item = itemByRomaji(this.currentAnswer);
+        if (item) this.startVoiceListening(item);
+      }
+    };
+    EventBus.on('voice-toggle', onVoiceToggle);
+    this.events.once('shutdown', () => {
+      EventBus.off('voice-toggle', onVoiceToggle);
+      this.stopVoiceListening();
+    });
+    EventBus.emit('voice-state', false);
+
     if (this.mode === 'free') {
       this.startFreeMode();
       return;
@@ -660,6 +681,79 @@ export class UnderWaterScene extends Scene {
       this.questionTimer = this.time.delayedCall(limit, () => this.onQuestionTimeout());
       this.startTimeBar(limit);
     }
+
+    if (this.voiceOn) {
+      this.startVoiceListening(item);
+    }
+  }
+
+  // --- M1b: ja-JP voice input -----------------------------------------------------------------
+
+  // Listen for one utterance; keep re-arming while this question is active. Saying the target
+  // kana collects ALL matching koi (AoE — voice is powerful, ADR-0010). Mistakes give gentle
+  // feedback and never discharge the crystal. Mic errors leave the question click-only.
+  private startVoiceListening(item: KanaItem): void {
+    const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Ctor) return;
+    this.stopVoiceListening();
+
+    const rec = new Ctor();
+    this.recognition = rec;
+    rec.lang = 'ja-JP';
+    rec.interimResults = false;
+    rec.maxAlternatives = 3;
+    let failed = false;
+
+    rec.onresult = (event: SpeechRecognitionEvent) => {
+      if (this.currentAnswer !== item.romaji || this.gameOver) return;
+      const alternatives = Array.from(event.results[0] ?? []);
+      const hit = alternatives.some((alt) => matchesSpeech(alt.transcript, item));
+      if (hit) {
+        this.collectAllMatching(item);
+        this.onCorrectAnswer();
+      } else {
+        this.inputSystem.displayFeedback(null, false, true);
+      }
+    };
+    rec.onerror = () => { failed = true; }; // p.ej. mic denegado → seguimos solo con click
+    rec.onend = () => {
+      if (!failed && this.voiceOn && this.recognition === rec
+        && this.currentAnswer === item.romaji && !this.gameOver) {
+        try { rec.start(); } catch { /* already restarting */ }
+      }
+    };
+    try { rec.start(); } catch { /* concurrent start */ }
+  }
+
+  private stopVoiceListening(): void {
+    const rec = this.recognition;
+    if (!rec) return;
+    this.recognition = undefined; // clear first so onend won't re-arm
+    rec.onresult = null;
+    rec.onend = null;
+    rec.onerror = null;
+    try { rec.abort(); } catch { /* never started */ }
+  }
+
+  // Voice AoE: celebrate every koi carrying the spoken kana; charge the crystal once.
+  private collectAllMatching(item: KanaItem): void {
+    const targets = this.fishGroup.getChildren()
+      .filter((o) => (o as Phaser.GameObjects.Sprite).name === item.romaji) as Phaser.GameObjects.Sprite[];
+
+    targets.forEach((sprite, i) => {
+      if (i === 0) {
+        this.inputSystem.displayFeedback(sprite, true, false, item.romaji, item.audio);
+        return;
+      }
+      const circle = this.add.circle(sprite.x, sprite.y, 10, 0x9fe7ec, 0.5).setDepth(1);
+      this.tweens.add({
+        targets: circle, radius: 70, alpha: 0, duration: 700, ease: 'Cubic.easeOut',
+        onComplete: () => circle.destroy(),
+      });
+      this.tweens.add({ targets: sprite, scale: 1.5, duration: 150, yoyo: true, ease: 'Power1' });
+    });
+
+    this.inputSystem.growPlants(); // crystal charges once per answered question
   }
 
   // Shrinking countdown bar under the question text (Time mode).
@@ -767,6 +861,7 @@ export class UnderWaterScene extends Scene {
       this.timeBar.destroy();
       this.timeBar = undefined;
     }
+    this.stopVoiceListening(); // question is over — stop the per-question mic session
   }
 
   showQuestionAndHandleInput(): void {

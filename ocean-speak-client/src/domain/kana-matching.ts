@@ -32,6 +32,11 @@ export function normalizeRomaji(input: string): string {
     return input.trim().toLowerCase().replace(/[^a-z]/g, '');
 }
 
+/** Fold katakana into hiragana (codepoint shift); everything else passes through. */
+export function kataToHira(input: string): string {
+    return input.replace(/[ァ-ヶ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+}
+
 /** All accepted romaji spellings for a canonical romaji (itself + lenient variants). */
 export function variantsFor(romaji: string): string[] {
     const key = normalizeRomaji(romaji);
@@ -40,11 +45,11 @@ export function variantsFor(romaji: string): string[] {
 
 /**
  * True when `input` names `item`. Accepts the canonical romaji, its lenient
- * variants, any explicit `alias`, or the kana glyph itself (for ja-JP voice in M1b).
+ * variants, any explicit `alias`, or the kana glyph itself (katakana folded to hiragana).
  * Case- and whitespace-insensitive.
  */
 export function matches(input: string, item: KanaItem): boolean {
-    if (input.trim() === item.prompt) return true; // kana glyph (e.g. ja-JP transcript)
+    if (kataToHira(input.trim()) === item.prompt) return true; // kana glyph (カ → か)
     const got = normalizeRomaji(input);
     if (!got) return false;
     const accepted = new Set<string>([
@@ -52,4 +57,15 @@ export function matches(input: string, item: KanaItem): boolean {
         ...(item.alias ?? []).map(normalizeRomaji),
     ]);
     return accepted.has(got);
+}
+
+/**
+ * Beginner-lenient matcher for ja-JP speech transcripts (ADR-0010): the recognizer rarely
+ * returns a bare mora — it may emit a word containing it (か → "蚊", "カー", "たかい"). Accepts
+ * the kana glyph anywhere in the folded transcript, plus everything `matches` accepts.
+ */
+export function matchesSpeech(transcript: string, item: KanaItem): boolean {
+    const folded = kataToHira(transcript.trim());
+    if (folded.includes(item.prompt)) return true;
+    return matches(transcript, item);
 }

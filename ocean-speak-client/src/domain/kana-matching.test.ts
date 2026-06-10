@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { matches, normalizeRomaji, variantsFor, type KanaItem } from './kana-matching';
+import { matches, matchesSpeech, kataToHira, normalizeRomaji, variantsFor, type KanaItem } from './kana-matching';
 
 const ka: KanaItem = { prompt: 'か', romaji: 'ka', audio: 'hira_ka', script: 'hiragana' };
 const shi: KanaItem = { prompt: 'し', romaji: 'shi', audio: 'hira_shi', script: 'hiragana' };
@@ -54,5 +54,32 @@ describe('matches', () => {
         expect(matches('', ka)).toBe(false);
         expect(matches('   ', ka)).toBe(false);
         expect(matches('shi', ka)).toBe(false);
+    });
+
+    it('folds katakana to hiragana (ja-JP transcripts)', () => {
+        expect(matches('カ', ka)).toBe(true);
+        expect(matches('シ', shi)).toBe(true);
+    });
+});
+
+describe('kataToHira', () => {
+    it('converts katakana and leaves the rest alone', () => {
+        expect(kataToHira('カタカナ')).toBe('かたかな');
+        expect(kataToHira('かna1')).toBe('かna1');
+    });
+});
+
+describe('matchesSpeech (lenient, ADR-0010)', () => {
+    it('accepts the mora anywhere in the transcript', () => {
+        expect(matchesSpeech('たかい', ka)).toBe(true);  // contains か
+        expect(matchesSpeech('カー', ka)).toBe(true);    // katakana folded
+        expect(matchesSpeech('か', ka)).toBe(true);
+        expect(matchesSpeech('ka', ka)).toBe(true);      // romaji still works
+        expect(matchesSpeech('si', shi)).toBe(true);     // lenient variant
+    });
+
+    it('still rejects unrelated transcripts', () => {
+        expect(matchesSpeech('いぬ', ka)).toBe(false);
+        expect(matchesSpeech('', ka)).toBe(false);
     });
 });

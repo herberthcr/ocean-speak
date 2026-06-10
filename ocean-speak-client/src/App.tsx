@@ -40,20 +40,34 @@ function App() {
     const [rowProgress, setRowProgress] = useState<RowProgress | null>(null);
     const [owned, setOwned] = useState<string[]>(progressStore.collection());
     const [codexOpen, setCodexOpen] = useState(false);
+    const [voiceOn, setVoiceOn] = useState(false);
+
+    // ja-JP voice input is optional (ADR-0010); only offered when the browser supports it.
+    const voiceSupported = typeof window !== 'undefined'
+        && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
 
     useEffect(() => {
         const onTarget = (t: KanaTarget | null) => setTarget(t);
         const onRow = (r: RowProgress | null) => setRowProgress(r);
         const onProgress = (s: { collection: string[] }) => setOwned(s.collection);
+        const onVoiceState = (on: boolean) => setVoiceOn(on);
         EventBus.on('kana-target', onTarget);
         EventBus.on('row-progress', onRow);
         EventBus.on('progress-changed', onProgress);
+        EventBus.on('voice-state', onVoiceState);
         return () => {
             EventBus.off('kana-target', onTarget);
             EventBus.off('row-progress', onRow);
             EventBus.off('progress-changed', onProgress);
+            EventBus.off('voice-state', onVoiceState);
         };
     }, []);
+
+    const toggleVoice = () => {
+        const next = !voiceOn;
+        setVoiceOn(next);
+        EventBus.emit('voice-toggle', next);
+    };
 
     const playAudio = () => {
         if (!target) return;
@@ -119,6 +133,15 @@ function App() {
                             </div>
                         ))}
                     </div>
+                )}
+                {voiceSupported && target && target.mode !== 'free' && (
+                    <button
+                        className={`kana-panel__voice ${voiceOn ? 'kana-panel__voice--on' : ''}`}
+                        onClick={toggleVoice}
+                        title="Di el kana en voz alta — recoge todas las coincidencias"
+                    >
+                        🎤 Voz: {voiceOn ? 'ON' : 'OFF'}
+                    </button>
                 )}
                 <button className="kana-panel__codex" onClick={() => setCodexOpen(true)}>
                     📖 Colección · {owned.length}/{KANA_ITEMS.length}

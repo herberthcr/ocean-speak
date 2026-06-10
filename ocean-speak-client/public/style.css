@@ -167,6 +167,28 @@ body {
     background: #3a1f14;
 }
 
+.kana-panel__voice {
+    margin-top: 14px;
+    padding: 9px 12px;
+    width: 100%;
+    font-size: 15px;
+    color: #eaf6f8;
+    background-color: #0a2030;
+    border: 1px solid #2c4d5e;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.kana-panel__voice:hover {
+    border-color: #39c0c8;
+}
+
+.kana-panel__voice--on {
+    background-color: #14485c;
+    border-color: #ffd479;
+    color: #ffd479;
+}
+
 .kana-panel__codex {
     margin-top: 16px;
     padding: 10px 12px;
