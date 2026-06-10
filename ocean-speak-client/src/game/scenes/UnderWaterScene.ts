@@ -62,9 +62,12 @@ export class UnderWaterScene extends Scene {
   private wordPool: VocabItem[] = [];
   private wordPondPool: KanaItem[] = [];
   private lastWordRomaji?: string;
-  private questionTimer?: Phaser.Time.TimerEvent;
-  private timeBar?: Phaser.GameObjects.Rectangle;
-  private levelTimeouts: number = 0;
+  // Time mode: one persistent level budget — drains continuously, hits add time, misses cost it.
+  private budgetLeftMs: number = 0;
+  private budgetRunning: boolean = false;
+  private budgetExpiries: number = 0;
+  private budgetBarBg?: Phaser.GameObjects.Rectangle;
+  private budgetBarFill?: Phaser.GameObjects.Rectangle;
   private pondInputReady: boolean = false;
   // M1b: optional ja-JP voice input (ADR-0010). Click always remains the fallback.
   private voiceOn: boolean = false;
@@ -188,6 +191,14 @@ export class UnderWaterScene extends Scene {
     // Keep the target halo pinned to its koi (runs after the ECS wrote sprite positions).
     if (this.targetGlow && this.targetGlowSprite) {
       this.targetGlow.setPosition(this.targetGlowSprite.x, this.targetGlowSprite.y);
+    }
+    // Time mode: the level budget drains continuously while questions are live.
+    if (this.mode === 'time' && this.budgetRunning && !this.gameOver) {
+      this.budgetLeftMs -= delta;
+      this.updateBudgetBar();
+      if (this.budgetLeftMs <= 0) {
+        this.onLevelTimeUp();
+      }
     }
   }
 
@@ -791,7 +802,11 @@ export class UnderWaterScene extends Scene {
     this.currentAnswer = '';
     this.questionText.setText('');
     this.clearQuestionTimer();
-    this.levelTimeouts = 0; // fresh slate for Time-mode stars
+    // Fresh time budget for the level (the clock arms when the first question appears).
+    this.budgetLeftMs = KOI_POND.TIME_BUDGET.START_MS;
+    this.budgetRunning = false;
+    this.budgetExpiries = 0;
+    this.updateBudgetBar();
 
     const cfg = levelConfig(this.currentLevel);
     const relabel = () => {
@@ -868,6 +883,11 @@ export class UnderWaterScene extends Scene {
           this.onCorrectAnswer();
         } else {
           this.streak = 0;
+          // Time mode: a wrong tap costs budget (the crystal still never discharges).
+          if (this.mode === 'time') {
+            this.budgetLeftMs = Math.max(0, this.budgetLeftMs - KOI_POND.TIME_BUDGET.MISS_PENALTY_MS);
+            this.updateBudgetBar();
+          }
         }
       }
 
@@ -961,9 +981,8 @@ export class UnderWaterScene extends Scene {
     }
 
     if (this.mode === 'time') {
-      const limit = levelConfig(this.currentLevel).timeLimitMs || KOI_POND.TIME_MODE_DEFAULT_MS;
-      this.questionTimer = this.time.delayedCall(limit, () => this.onQuestionTimeout());
-      this.startTimeBar(limit);
+      this.ensureBudgetBar();
+      this.budgetRunning = true; // the level clock only starts once a question is live
     }
 
     if (this.voiceOn) {
@@ -1041,17 +1060,55 @@ export class UnderWaterScene extends Scene {
     this.inputSystem.growPlants(); // crystal charges once per answered question
   }
 
-  // Shrinking countdown bar under the question text (Time mode).
-  private startTimeBar(limitMs: number): void {
-    this.timeBar = this.add.rectangle(this.cameras.main.centerX - 150, 632, 300, 8, 0x39c0c8)
-      .setOrigin(0, 0.5).setDepth(250);
-    this.tweens.add({ targets: this.timeBar, scaleX: 0, duration: limitMs, ease: 'Linear' });
+  // --- Time mode: level budget bar -------------------------------------------------------------
+
+  private ensureBudgetBar(): void {
+    if (this.budgetBarBg) return;
+    const x = this.cameras.main.centerX - 160;
+    this.budgetBarBg = this.add.rectangle(x, 632, 320, 10, 0x0a2030, 0.9)
+      .setOrigin(0, 0.5).setDepth(250).setStrokeStyle(1, 0x39c0c8, 0.6);
+    this.budgetBarFill = this.add.rectangle(x + 1, 632, 318, 8, 0x39c0c8)
+      .setOrigin(0, 0.5).setDepth(251);
+    this.updateBudgetBar();
+  }
+
+  private updateBudgetBar(): void {
+    if (!this.budgetBarFill) return;
+    const frac = Phaser.Math.Clamp(this.budgetLeftMs / KOI_POND.TIME_BUDGET.MAX_MS, 0, 1);
+    this.budgetBarFill.setScale(frac, 1);
+    this.budgetBarFill.setFillStyle(frac > 0.45 ? 0x39c0c8 : frac > 0.2 ? 0xffd479 : 0xff6b6b);
+  }
+
+  // Budget hit zero: gentle reset — the bar refills and the level continues (progress kept),
+  // but the star run is lost. No game over (pedagogy).
+  private onLevelTimeUp(): void {
+    this.budgetRunning = false;
+    this.budgetExpiries++;
+    this.clearQuestionTimer();
+    this.currentAnswer = '';
+    this.streak = 0;
+    this.sound.play(SOUNDS.INCORRECT_SOUND);
+    this.cameras.main.shake(180, 0.004);
+    this.updateWaitingMessage(t('timeUp'), 'other');
+    this.budgetLeftMs = KOI_POND.TIME_BUDGET.START_MS;
+    this.updateBudgetBar();
+    this.time.delayedCall(1500, () => this.nextKanaQuestion());
   }
 
   private onCorrectAnswer(): void {
     this.clearQuestionTimer();
     this.streak++;
     this.showStreak();
+
+    // Time mode: a hit buys time (capped); the clock pauses during the breathing gap.
+    if (this.mode === 'time') {
+      this.budgetRunning = false;
+      this.budgetLeftMs = Math.min(
+        this.budgetLeftMs + KOI_POND.TIME_BUDGET.HIT_BONUS_MS,
+        KOI_POND.TIME_BUDGET.MAX_MS,
+      );
+      this.updateBudgetBar();
+    }
 
     const romaji = this.currentAnswer;
     this.currentAnswer = ''; // no question pending: ignore taps until the next prompt
@@ -1073,13 +1130,6 @@ export class UnderWaterScene extends Scene {
     }
   }
 
-  // Time mode: a timeout carries no penalty (pedagogy) — it just re-poses and costs stars.
-  private onQuestionTimeout(): void {
-    if (this.gameOver) return;
-    this.levelTimeouts++;
-    this.nextKanaQuestion();
-  }
-
   // Level cleared: pause and show the reward (cards earned); advance on "Siguiente nivel".
   private onLevelComplete(): void {
     if (this.gameOver) return;
@@ -1087,10 +1137,13 @@ export class UnderWaterScene extends Scene {
     const cfg = levelConfig(this.currentLevel);
     const isLast = this.currentLevel >= MAX_LEVEL;
 
-    // Time-mode stars: clean run = 3, a couple of timeouts = 2, more = 1. Best kept per level.
+    // Time-mode stars: never ran out + finished with plenty of budget = 3; comfortable = 2;
+    // survived (or refilled the bar at least once) = 1. Best kept per level.
     let stars = 0;
     if (this.mode === 'time') {
-      stars = this.levelTimeouts === 0 ? 3 : this.levelTimeouts <= 2 ? 2 : 1;
+      this.budgetRunning = false;
+      const frac = this.budgetLeftMs / KOI_POND.TIME_BUDGET.MAX_MS;
+      stars = this.budgetExpiries > 0 ? 1 : frac >= 0.45 ? 3 : frac >= 0.18 ? 2 : 1;
       progressStore.setLevelStars(cfg.level, stars);
     }
 
@@ -1141,13 +1194,6 @@ export class UnderWaterScene extends Scene {
   }
 
   private clearQuestionTimer(): void {
-    this.questionTimer?.remove();
-    this.questionTimer = undefined;
-    if (this.timeBar) {
-      this.tweens.killTweensOf(this.timeBar);
-      this.timeBar.destroy();
-      this.timeBar = undefined;
-    }
     this.stopVoiceListening(); // question is over — stop the per-question mic session
     this.clearTargetGlow();
   }

@@ -130,8 +130,14 @@ export const KOI_POND = {
     // Interleaved review (SRS-lite): chance that a question re-asks a mastered kana from an
     // earlier row instead of the current one.
     REVIEW_CHANCE: 0.2,
-    // Time mode: per-question limit when the level doesn't define one (early levels have 0 = calm).
-    TIME_MODE_DEFAULT_MS: 8000,
+    // Time mode: one persistent budget for the whole level. It drains continuously; hits add
+    // time (capped), misses subtract it. Reaching zero refills the bar but costs the star run.
+    TIME_BUDGET: {
+        START_MS: 60000,
+        MAX_MS: 75000,
+        HIT_BONUS_MS: 2500,
+        MISS_PENALTY_MS: 5000,
+    },
     // Words mode: pause after completing a word so its full clip finishes before the next
     // challenge is announced (longer when the card pop is on screen).
     WORD_NEXT_DELAY_MS: 2000,
