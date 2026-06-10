@@ -65,7 +65,6 @@ export class UnderWaterScene extends Scene {
   // Time mode: one persistent level budget — drains continuously, hits add time, misses cost it.
   private budgetLeftMs: number = 0;
   private budgetRunning: boolean = false;
-  private budgetExpiries: number = 0;
   private budgetBarBg?: Phaser.GameObjects.Rectangle;
   private budgetBarFill?: Phaser.GameObjects.Rectangle;
   private pondInputReady: boolean = false;
@@ -802,10 +801,9 @@ export class UnderWaterScene extends Scene {
     this.currentAnswer = '';
     this.questionText.setText('');
     this.clearQuestionTimer();
-    // Fresh time budget for the level (the clock arms when the first question appears).
+    // Fresh time budget for the level (the clock arms on the "¡A pescar!" button).
     this.budgetLeftMs = KOI_POND.TIME_BUDGET.START_MS;
     this.budgetRunning = false;
-    this.budgetExpiries = 0;
     this.updateBudgetBar();
 
     const cfg = levelConfig(this.currentLevel);
@@ -1080,22 +1078,25 @@ export class UnderWaterScene extends Scene {
     this.budgetBarFill.setFillStyle(frac > 0.45 ? 0x39c0c8 : frac > 0.2 ? 0xffd479 : 0xff6b6b);
   }
 
-  // Budget hit zero: gentle reset — the bar refills and the level continues (progress kept),
-  // but the star run is lost. No game over (pedagogy).
+  // Budget hit zero: the Time-mode run FAILS. The pond pauses behind the time-up overlay;
+  // retrying replays the level (row mastery resets, cards and taught status are kept).
   private onLevelTimeUp(): void {
     this.budgetRunning = false;
-    this.budgetExpiries++;
     this.clearQuestionTimer();
     this.currentAnswer = '';
     this.streak = 0;
-    this.sound.play(SOUNDS.INCORRECT_SOUND);
     this.cameras.main.shake(180, 0.004);
-    this.updateWaitingMessage(t('timeUp'), 'other');
-    this.budgetLeftMs = KOI_POND.TIME_BUDGET.START_MS;
-    this.updateBudgetBar();
-    this.time.delayedCall(1500, () => {
-      this.budgetRunning = true; // refill done — the run continues
-      this.nextKanaQuestion();
+
+    this.input.enabled = false;
+    this.scene.pause();
+    this.scene.launch(SCENES.TIME_UP);
+    this.events.once('timeup-done', (opts?: { retry?: boolean }) => {
+      if (opts?.retry) {
+        progressStore.resetMasteryFor(levelConfig(this.currentLevel).adds);
+        this.beginLevel(true);
+      } else {
+        this.thisIsTheEnd(); // back to the menu (reload — the known-safe exit in this fork)
+      }
     });
   }
 
@@ -1140,13 +1141,13 @@ export class UnderWaterScene extends Scene {
     const cfg = levelConfig(this.currentLevel);
     const isLast = this.currentLevel >= MAX_LEVEL;
 
-    // Time-mode stars: never ran out + finished with plenty of budget = 3; comfortable = 2;
-    // survived (or refilled the bar at least once) = 1. Best kept per level.
+    // Time-mode stars by remaining budget: plenty = 3, comfortable = 2, survived = 1.
+    // (Running out is a fail now, so completion always means the bar never hit zero.)
     let stars = 0;
     if (this.mode === 'time') {
       this.budgetRunning = false;
       const frac = this.budgetLeftMs / KOI_POND.TIME_BUDGET.START_MS;
-      stars = this.budgetExpiries > 0 ? 1 : frac >= 0.45 ? 3 : frac >= 0.18 ? 2 : 1;
+      stars = frac >= 0.45 ? 3 : frac >= 0.18 ? 2 : 1;
       progressStore.setLevelStars(cfg.level, stars);
     }
 

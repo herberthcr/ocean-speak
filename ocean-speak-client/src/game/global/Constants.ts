@@ -94,7 +94,8 @@ export const SCENES = {
     TEACH: 'TeachScene',
     REWARD: 'RewardScene',
     LESSON: 'LessonScene',
-    MODE_SELECT: 'ModeSelectScene'
+    MODE_SELECT: 'ModeSelectScene',
+    TIME_UP: 'TimeUpScene'
 };
 
 // Komorebi: collectible kana card visuals (ADR-0011 / docs/systems/card-system.md).

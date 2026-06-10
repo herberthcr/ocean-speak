@@ -7,6 +7,7 @@ import { TeachScene } from './scenes/TeachScene';
 import { RewardScene } from './scenes/RewardScene';
 import { LessonScene } from './scenes/LessonScene';
 import { ModeSelectScene } from './scenes/ModeSelectScene';
+import { TimeUpScene } from './scenes/TimeUpScene';
 
 import { AUTO, Game, Types } from 'phaser';
 
@@ -26,7 +27,7 @@ const config: Types.Core.GameConfig = {
     },
     //fps: { forceSetTimeOut: true, target: 60 },
     scene: [
-        PreloadScene, SplashScene, UnderWaterScene, MenuScene, TeachScene, RewardScene, LessonScene, ModeSelectScene
+        PreloadScene, SplashScene, UnderWaterScene, MenuScene, TeachScene, RewardScene, LessonScene, ModeSelectScene, TimeUpScene
     ]
 };
 
