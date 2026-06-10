@@ -1012,23 +1012,40 @@ export class UnderWaterScene extends Scene {
     rec.onstart = () => {
       if (this.recognition === rec) EventBus.emit('voice-listening', true);
     };
+    // Megaphone lights up while the player is actually speaking.
+    rec.onspeechstart = () => { if (this.recognition === rec) EventBus.emit('voice-speaking', true); };
+    rec.onspeechend = () => { if (this.recognition === rec) EventBus.emit('voice-speaking', false); };
 
     rec.onresult = (event: SpeechRecognitionEvent) => {
       if (this.currentAnswer !== item.romaji || this.gameOver) return;
       let heard = '';
       let matched = false;
+      let hasFinal = false;
       for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
+        if (result.isFinal) hasFinal = true;
         for (let a = 0; a < result.length; a++) {
           if (a === 0) heard += result[a].transcript; // best guess for display
           if (matchesSpeech(result[a].transcript, item)) matched = true;
         }
       }
-      EventBus.emit('voice-heard', heard.trim()); // show what the mic is picking up
+      heard = heard.trim();
+
       if (matched) {
         EventBus.emit('voice-heard', '');
+        EventBus.emit('voice-speaking', false);
         this.collectAllMatching(item);
         this.onCorrectAnswer();
+        return;
+      }
+
+      if (hasFinal && heard) {
+        // A complete utterance that didn't match → clear "didn't get it" feedback (no penalty).
+        EventBus.emit('voice-miss', heard);
+        this.sound.play(SOUNDS.INCORRECT_SOUND);
+        this.streak = 0;
+      } else {
+        EventBus.emit('voice-heard', heard); // live interim transcript
       }
     };
 
@@ -1058,10 +1075,13 @@ export class UnderWaterScene extends Scene {
   private stopVoiceListening(): void {
     const rec = this.recognition;
     EventBus.emit('voice-listening', false);
+    EventBus.emit('voice-speaking', false);
     EventBus.emit('voice-heard', '');
     if (!rec) return;
     this.recognition = undefined; // clear first so onend won't re-arm
     rec.onstart = null;
+    rec.onspeechstart = null;
+    rec.onspeechend = null;
     rec.onresult = null;
     rec.onend = null;
     rec.onerror = null;

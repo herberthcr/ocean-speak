@@ -54,8 +54,11 @@ function App() {
     const [codexOpen, setCodexOpen] = useState(false);
     const [voiceOn, setVoiceOn] = useState(false);
     const [voiceListening, setVoiceListening] = useState(false);
+    const [voiceSpeaking, setVoiceSpeaking] = useState(false);
     const [voiceHeard, setVoiceHeard] = useState('');
+    const [voiceMiss, setVoiceMiss] = useState<{ text: string; id: number } | null>(null);
     const [voiceDenied, setVoiceDenied] = useState(false);
+    const missId = useRef(0);
     // Re-render the panel when the language changes (toggle lives in the Phaser menu).
     const [, setLang] = useState<Lang>(currentLang());
 
@@ -69,10 +72,13 @@ function App() {
         const onWord = (w: WordTarget | null) => { setWordTarget(w); if (w) setTarget(null); };
         const onRow = (r: RowProgress | null) => setRowProgress(r);
         const onProgress = (s: { collection: string[] }) => setOwned(s.collection);
-        const onVoiceState = (on: boolean) => { setVoiceOn(on); if (!on) { setVoiceListening(false); setVoiceHeard(''); } };
-        const onListening = (on: boolean) => setVoiceListening(on);
-        const onHeard = (txt: string) => setVoiceHeard(txt);
-        const onDenied = () => { setVoiceDenied(true); setVoiceOn(false); setVoiceListening(false); };
+        const resetVoice = () => { setVoiceListening(false); setVoiceSpeaking(false); setVoiceHeard(''); setVoiceMiss(null); };
+        const onVoiceState = (on: boolean) => { setVoiceOn(on); if (!on) resetVoice(); };
+        const onListening = (on: boolean) => { setVoiceListening(on); if (!on) setVoiceSpeaking(false); };
+        const onSpeaking = (on: boolean) => setVoiceSpeaking(on);
+        const onHeard = (txt: string) => { setVoiceHeard(txt); if (txt) setVoiceMiss(null); };
+        const onMiss = (txt: string) => { missId.current += 1; setVoiceMiss({ text: txt, id: missId.current }); setVoiceHeard(''); setVoiceSpeaking(false); };
+        const onDenied = () => { setVoiceDenied(true); setVoiceOn(false); resetVoice(); };
         const onLang = (l: Lang) => setLang(l);
         EventBus.on('kana-target', onTarget);
         EventBus.on('word-target', onWord);
@@ -80,7 +86,9 @@ function App() {
         EventBus.on('progress-changed', onProgress);
         EventBus.on('voice-state', onVoiceState);
         EventBus.on('voice-listening', onListening);
+        EventBus.on('voice-speaking', onSpeaking);
         EventBus.on('voice-heard', onHeard);
+        EventBus.on('voice-miss', onMiss);
         EventBus.on('voice-denied', onDenied);
         EventBus.on('lang-changed', onLang);
         return () => {
@@ -90,11 +98,20 @@ function App() {
             EventBus.off('progress-changed', onProgress);
             EventBus.off('voice-state', onVoiceState);
             EventBus.off('voice-listening', onListening);
+            EventBus.off('voice-speaking', onSpeaking);
             EventBus.off('voice-heard', onHeard);
+            EventBus.off('voice-miss', onMiss);
             EventBus.off('voice-denied', onDenied);
             EventBus.off('lang-changed', onLang);
         };
     }, []);
+
+    // Clear the "didn't get it" feedback shortly after it shows.
+    useEffect(() => {
+        if (!voiceMiss) return;
+        const id = setTimeout(() => setVoiceMiss((m) => (m && m.id === voiceMiss.id ? null : m)), 1600);
+        return () => clearTimeout(id);
+    }, [voiceMiss]);
 
     const toggleVoice = () => {
         const next = !voiceOn;
@@ -203,10 +220,18 @@ function App() {
                             {voiceDenied ? t('voiceDenied') : `${t('voice')}: ${voiceOn ? 'ON' : 'OFF'}`}
                         </button>
                         {voiceOn && (
-                            <div className="voice-feedback">
-                                <span className={`voice-feedback__dot ${voiceListening ? 'is-live' : ''}`} />
+                            <div className={`voice-feedback ${voiceMiss ? 'is-miss' : ''}`}>
+                                <span className={`voice-feedback__mic ${voiceSpeaking ? 'is-speaking' : voiceListening ? 'is-live' : ''}`}>
+                                    {voiceSpeaking ? '📣' : '🎤'}
+                                </span>
                                 <span className="voice-feedback__label">{t('listening')}</span>
-                                {voiceHeard && <span className="voice-feedback__heard">「{voiceHeard}」</span>}
+                                {voiceMiss ? (
+                                    <span key={voiceMiss.id} className="voice-feedback__heard voice-feedback__heard--miss">
+                                        ✗ 「{voiceMiss.text}」
+                                    </span>
+                                ) : voiceHeard ? (
+                                    <span className="voice-feedback__heard">「{voiceHeard}」</span>
+                                ) : null}
                             </div>
                         )}
                     </>
