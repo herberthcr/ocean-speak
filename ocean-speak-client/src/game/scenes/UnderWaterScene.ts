@@ -836,6 +836,12 @@ export class UnderWaterScene extends Scene {
     this.events.once('lesson-done', () => {
       cfg.adds.forEach((r) => progressStore.markTaught(r)); // the lesson IS the teach-first beat
       this.input.enabled = true;
+      // Time mode: the level clock arms exactly when the player presses "¡A pescar!" and runs
+      // continuously until the level ends (overlays freeze it by pausing the scene).
+      if (this.mode === 'time') {
+        this.ensureBudgetBar();
+        this.budgetRunning = true;
+      }
       this.nextKanaQuestion();
     });
   }
@@ -980,11 +986,6 @@ export class UnderWaterScene extends Scene {
       this.sound.play(item.audio);
     }
 
-    if (this.mode === 'time') {
-      this.ensureBudgetBar();
-      this.budgetRunning = true; // the level clock only starts once a question is live
-    }
-
     if (this.voiceOn) {
       this.startVoiceListening(item);
     }
@@ -1092,7 +1093,10 @@ export class UnderWaterScene extends Scene {
     this.updateWaitingMessage(t('timeUp'), 'other');
     this.budgetLeftMs = KOI_POND.TIME_BUDGET.START_MS;
     this.updateBudgetBar();
-    this.time.delayedCall(1500, () => this.nextKanaQuestion());
+    this.time.delayedCall(1500, () => {
+      this.budgetRunning = true; // refill done — the run continues
+      this.nextKanaQuestion();
+    });
   }
 
   private onCorrectAnswer(): void {
@@ -1100,9 +1104,8 @@ export class UnderWaterScene extends Scene {
     this.streak++;
     this.showStreak();
 
-    // Time mode: a hit buys time (capped); the clock pauses during the breathing gap.
+    // Time mode: a hit buys time (capped). The clock keeps running — it's one level-wide run.
     if (this.mode === 'time') {
-      this.budgetRunning = false;
       this.budgetLeftMs = Math.min(
         this.budgetLeftMs + KOI_POND.TIME_BUDGET.HIT_BONUS_MS,
         KOI_POND.TIME_BUDGET.MAX_MS,
