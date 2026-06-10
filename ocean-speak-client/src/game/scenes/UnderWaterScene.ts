@@ -60,6 +60,7 @@ export class UnderWaterScene extends Scene {
   private spell?: SpellState;
   private wordPool: VocabItem[] = [];
   private wordPondPool: KanaItem[] = [];
+  private lastWordRomaji?: string;
   private questionTimer?: Phaser.Time.TimerEvent;
   private timeBar?: Phaser.GameObjects.Rectangle;
   private levelTimeouts: number = 0;
@@ -505,7 +506,11 @@ export class UnderWaterScene extends Scene {
   private nextWord(): void {
     if (this.gameOver) return;
     const unowned = this.wordPool.filter((w) => !progressStore.isOwned(WORD_CARD_PREFIX + w.romaji));
-    const word = Phaser.Math.RND.pick(unowned.length > 0 ? unowned : this.wordPool);
+    let candidates = unowned.length > 0 ? unowned : this.wordPool;
+    // Never re-ask the word just completed back-to-back — it sounds like a glitchy repeat.
+    const fresh = candidates.filter((w) => w.romaji !== this.lastWordRomaji);
+    if (fresh.length > 0) candidates = fresh;
+    const word = Phaser.Math.RND.pick(candidates);
     this.currentWord = word;
     this.spell = startWord(word.kana);
 
@@ -588,17 +593,19 @@ export class UnderWaterScene extends Scene {
     const word = this.currentWord;
     if (!word) return;
     this.currentWord = undefined; // ignore taps until the next word arrives
+    this.lastWordRomaji = word.romaji;
 
     const awarded = progressStore.awardWordCard(word.romaji);
     this.inputSystem.growPlants(); // each completed word charges the crystal
     if (awarded) this.popWordCard(word);
     this.updateWaitingMessage(`${word.reading} — ${word.meaning}`, 'student');
-    // Say the whole word once the last kana clip has finished (いいえ, not い…え).
+    // Say the whole word once the last kana clip has finished (いいえ, not い…え)…
     this.time.delayedCall(650, () => {
       if (this.cache.audio.exists(word.audio)) this.sound.play(word.audio);
     });
+    // …and only announce the next challenge after that clip has had room to breathe.
     this.time.delayedCall(
-      awarded ? KOI_POND.NEXT_QUESTION_DELAY_CARD_MS : KOI_POND.NEXT_QUESTION_DELAY_MS,
+      awarded ? KOI_POND.WORD_NEXT_DELAY_CARD_MS : KOI_POND.WORD_NEXT_DELAY_MS,
       () => this.nextWord(),
     );
   }

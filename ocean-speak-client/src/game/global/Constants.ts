@@ -132,6 +132,10 @@ export const KOI_POND = {
     REVIEW_CHANCE: 0.2,
     // Time mode: per-question limit when the level doesn't define one (early levels have 0 = calm).
     TIME_MODE_DEFAULT_MS: 8000,
+    // Words mode: pause after completing a word so its full clip finishes before the next
+    // challenge is announced (longer when the card pop is on screen).
+    WORD_NEXT_DELAY_MS: 2000,
+    WORD_NEXT_DELAY_CARD_MS: 2400,
 };
 
 export const SOUNDS = {
