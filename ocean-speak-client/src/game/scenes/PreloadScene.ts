@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
 import { BACKGROUNDS, SHADERS, ASSETS, IMAGES, SCENES, FONTS, SOUNDS } from '../global/Constants';
-import { KANA_ITEMS } from '../../data/content';
+import { KANA_ITEMS, VOCAB_ITEMS } from '../../data/content';
 
 export class PreloadScene extends Scene {
     constructor() {
@@ -54,9 +54,13 @@ export class PreloadScene extends Scene {
         this.load.audio(SOUNDS.MOUSE_OVER_SOUND, 'sounds/mouse_over_sound.wav');
         this.load.audio(SOUNDS.MOUSE_CLICK_SOUND, 'sounds/mouse_click_sound.wav');
 
-        // Komorebi: hiragana pronunciation clips (edge-tts, ADR-0008). Keyed by content audio id.
+        // Komorebi: pronunciation clips (edge-tts, ADR-0008). Keyed by content audio id —
+        // kana morae (hira_*) and curated vocabulary words (word_*, modo palabras).
         KANA_ITEMS.forEach((item) => {
             this.load.audio(item.audio, `audio/${item.audio}.mp3`);
+        });
+        VOCAB_ITEMS.forEach((v) => {
+            this.load.audio(v.audio, `audio/${v.audio}.mp3`);
         });
     }
 

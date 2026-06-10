@@ -593,7 +593,8 @@ export class UnderWaterScene extends Scene {
     this.inputSystem.growPlants(); // each completed word charges the crystal
     if (awarded) this.popWordCard(word);
     this.updateWaitingMessage(`${word.reading} — ${word.meaning}`, 'student');
-    this.time.delayedCall(450, () => {
+    // Say the whole word once the last kana clip has finished (いいえ, not い…え).
+    this.time.delayedCall(650, () => {
       if (this.cache.audio.exists(word.audio)) this.sound.play(word.audio);
     });
     this.time.delayedCall(
