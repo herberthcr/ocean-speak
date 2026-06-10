@@ -75,3 +75,24 @@ export function resetMastery(s: ProgressState, romaji: string[]): ProgressState 
     for (const r of romaji) delete mastery[r];
     return { ...s, mastery };
 }
+
+/**
+ * Recognition → recall gradient: after `recallAfter` correct taps the prompt stops showing the
+ * glyph and cues by sound/romaji only ("which one sounds 'ka'?").
+ */
+export function isRecallStage(s: ProgressState, romaji: string, recallAfter: number): boolean {
+    return masteryOf(s, romaji) >= recallAfter;
+}
+
+/**
+ * Interleaved-review pool (SRS-lite): kana from earlier rows (cumulative pool minus the current
+ * row) that are already mastered. These get re-asked occasionally to refresh memory.
+ */
+export function reviewCandidates(
+    s: ProgressState,
+    poolRomaji: string[],
+    rowRomaji: string[],
+    threshold: number,
+): string[] {
+    return poolRomaji.filter((r) => !rowRomaji.includes(r) && isMastered(s, r, threshold));
+}

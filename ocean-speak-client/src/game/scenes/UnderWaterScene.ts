@@ -533,23 +533,36 @@ export class UnderWaterScene extends Scene {
     return levelConfig(this.currentLevel).correctPerKana;
   }
 
-  // Next kana to ask: a not-yet-mastered kana from this level's new row that is on a koi.
-  // Null when every new-row kana is mastered (the level is complete).
-  private pickTarget(): KanaItem | null {
+  // Next kana to ask. Usually a not-yet-mastered kana from this level's new row; ~1 in 5 times
+  // an interleaved review of a mastered kana from an earlier row (SRS-lite). Null when every
+  // new-row kana is mastered (the level is complete) — review never blocks completion.
+  private pickTarget(): { item: KanaItem; review: boolean } | null {
     const th = this.threshold();
-    const candidates = levelConfig(this.currentLevel).adds
+    const cfg = levelConfig(this.currentLevel);
+    const rowCandidates = cfg.adds
       .filter((r) => progressStore.masteryOf(r) < th && this.objectManager.hasKana(r))
       .map((r) => itemByRomaji(r))
       .filter((i): i is KanaItem => Boolean(i));
-    return candidates.length ? Phaser.Math.RND.pick(candidates) : null;
+    if (rowCandidates.length === 0) return null;
+
+    const reviewPool = progressStore
+      .reviewCandidates(poolForLevel(this.currentLevel).map((i) => i.romaji), cfg.adds, th)
+      .filter((r) => this.objectManager.hasKana(r))
+      .map((r) => itemByRomaji(r))
+      .filter((i): i is KanaItem => Boolean(i));
+    if (reviewPool.length > 0 && Phaser.Math.RND.frac() < KOI_POND.REVIEW_CHANCE) {
+      return { item: Phaser.Math.RND.pick(reviewPool), review: true };
+    }
+    return { item: Phaser.Math.RND.pick(rowCandidates), review: false };
   }
 
   private nextKanaQuestion(): void {
     if (this.gameOver) return;
     this.clearQuestionTimer();
 
-    const item = this.pickTarget();
-    if (!item) { this.onLevelComplete(); return; }
+    const target = this.pickTarget();
+    if (!target) { this.onLevelComplete(); return; }
+    const { item, review } = target;
     this.currentAnswer = item.romaji;
 
     if (!progressStore.isTaught(item.romaji)) {
@@ -558,18 +571,21 @@ export class UnderWaterScene extends Scene {
       this.scene.launch(SCENES.TEACH, { item });
       this.events.once('teach-done', (taughtItem: KanaItem) => {
         progressStore.markTaught(taughtItem.romaji);
-        this.presentQuestion(item);
+        this.presentQuestion(item, review);
       });
     } else {
-      this.presentQuestion(item);
+      this.presentQuestion(item, review);
     }
   }
 
-  // Show "Toca <kana>", play its pronunciation, mirror it to the HTML card, and (in Time mode)
-  // start the per-question countdown.
-  private presentQuestion(item: KanaItem): void {
+  // Pose the challenge and mirror it to the HTML card. Recognition stage shows the glyph
+  // ("Toca か"); recall stage hides it and cues by sound/romaji ("¿Cuál suena 'ka'?").
+  // In Time mode the per-question countdown starts here.
+  private presentQuestion(item: KanaItem, review: boolean = false): void {
     if (this.gameOver) return;
     this.input.enabled = true;
+
+    const recall = progressStore.isRecallStage(item.romaji, KOI_POND.RECALL_AFTER_TAPS);
 
     EventBus.emit('kana-target', {
       prompt: item.prompt,
@@ -577,10 +593,12 @@ export class UnderWaterScene extends Scene {
       audio: item.audio,
       level: this.currentLevel,
       label: levelConfig(this.currentLevel).label,
+      mode: recall ? 'recall' : 'glyph',
+      review,
     });
 
-    this.questionText.setText(`Toca  ${item.prompt}`);
-    this.textHelper.updateTextColor(this.questionText, 'pink');
+    this.questionText.setText(recall ? `¿Cuál suena  "${item.romaji}"?` : `Toca  ${item.prompt}`);
+    this.textHelper.updateTextColor(this.questionText, review ? 'cyan' : 'pink');
     this.questionText.setVisible(true);
     this.emitRowProgress();
 

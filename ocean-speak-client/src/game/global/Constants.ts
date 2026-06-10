@@ -123,6 +123,12 @@ export const KOI_POND = {
     // (longer when the "new card" pop is on screen).
     NEXT_QUESTION_DELAY_MS: 1200,
     NEXT_QUESTION_DELAY_CARD_MS: 1700,
+    // Recognition → recall gradient: after this many correct taps the prompt stops showing the
+    // glyph and cues by sound/romaji only.
+    RECALL_AFTER_TAPS: 2,
+    // Interleaved review (SRS-lite): chance that a question re-asks a mastered kana from an
+    // earlier row instead of the current one.
+    REVIEW_CHANCE: 0.2,
 };
 
 export const SOUNDS = {

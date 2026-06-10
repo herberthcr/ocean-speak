@@ -9,6 +9,8 @@ import {
     levelComplete,
     masteryOf,
     resetMastery,
+    isRecallStage,
+    reviewCandidates,
 } from './progress';
 
 describe('recordCorrect', () => {
@@ -72,6 +74,34 @@ describe('resetMastery', () => {
         const reset = resetMastery(s, ['a']);
         expect(masteryOf(reset, 'a')).toBe(0);
         expect(masteryOf(reset, 'ka')).toBe(1);
+    });
+});
+
+describe('isRecallStage', () => {
+    it('switches to recall after N correct taps', () => {
+        let s = emptyProgress();
+        expect(isRecallStage(s, 'a', 2)).toBe(false);
+        ({ state: s } = recordCorrect(s, 'a', 4));
+        expect(isRecallStage(s, 'a', 2)).toBe(false); // 1 tap
+        ({ state: s } = recordCorrect(s, 'a', 4));
+        expect(isRecallStage(s, 'a', 2)).toBe(true);  // 2 taps → recall
+    });
+});
+
+describe('reviewCandidates', () => {
+    it('returns only mastered kana outside the current row', () => {
+        let s = emptyProgress();
+        const master = (r: string) => { for (let i = 0; i < 4; i++) ({ state: s } = recordCorrect(s, r, 4)); };
+        master('a'); master('i'); // vowels mastered
+        ({ state: s } = recordCorrect(s, 'ka', 4)); // current row, in progress
+
+        const pool = ['a', 'i', 'u', 'ka', 'ki'];
+        expect(reviewCandidates(s, pool, ['ka', 'ki'], 4)).toEqual(['a', 'i']);
+    });
+
+    it('is empty on the first level (no earlier rows mastered)', () => {
+        const s = emptyProgress();
+        expect(reviewCandidates(s, ['a', 'i'], ['a', 'i'], 4)).toEqual([]);
     });
 });
 

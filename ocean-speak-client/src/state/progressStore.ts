@@ -11,6 +11,8 @@ import {
     masteryOf,
     levelComplete,
     resetMastery,
+    isRecallStage,
+    reviewCandidates,
     type ProgressState,
 } from '../domain/progress';
 
@@ -94,6 +96,16 @@ class ProgressStore {
     resetMasteryFor(romaji: string[]): void {
         this.state = resetMastery(this.state, romaji);
         this.persist();
+    }
+
+    /** True when this kana's prompt should hide the glyph (recall stage). */
+    isRecallStage(romaji: string, recallAfter: number): boolean {
+        return isRecallStage(this.state, romaji, recallAfter);
+    }
+
+    /** Mastered kana from earlier rows, eligible for interleaved review. */
+    reviewCandidates(poolRomaji: string[], rowRomaji: string[], threshold: number): string[] {
+        return reviewCandidates(this.state, poolRomaji, rowRomaji, threshold);
     }
 
     /** Reset all progress (for the Codex "reiniciar" affordance / fresh demos). */

@@ -11,6 +11,10 @@ interface KanaTarget {
     audio: string;
     level: number;
     label: string;
+    /** 'glyph' shows the kana; 'recall' hides it (cue is sound + romaji). */
+    mode: 'glyph' | 'recall';
+    /** True when this is an interleaved review of an earlier row. */
+    review: boolean;
 }
 
 interface RowKana {
@@ -63,8 +67,15 @@ function App() {
             <aside className="kana-panel">
                 {target ? (
                     <>
-                        <p className="kana-panel__title">Toca este kana</p>
-                        <div className="kana-panel__glyph">{target.prompt}</div>
+                        {target.review && <span className="kana-panel__review">✨ Repaso</span>}
+                        <p className="kana-panel__title">
+                            {target.mode === 'recall' ? '¿Cuál suena así?' : 'Toca este kana'}
+                        </p>
+                        {target.mode === 'recall' ? (
+                            <div className="kana-panel__glyph kana-panel__glyph--hidden">?</div>
+                        ) : (
+                            <div className="kana-panel__glyph">{target.prompt}</div>
+                        )}
                         <button className="kana-panel__audio" onClick={playAudio}>🔊 Escuchar</button>
                         <p className="kana-panel__romaji">{target.romaji}</p>
                         <p className="kana-panel__level">Nivel {target.level} · {target.label}</p>
