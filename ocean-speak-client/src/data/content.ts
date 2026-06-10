@@ -107,3 +107,12 @@ export function poolForLevel(level: number): KanaItem[] {
 export function levelConfig(level: number): Level {
     return LEVELS.find((l) => l.level === level) ?? LEVELS[0];
 }
+
+const LEVEL_OF: Map<string, number> = new Map(
+    LEVELS.flatMap((l) => l.adds.map((r) => [r, l.level] as const)),
+);
+
+/** The level (row) that introduces a kana — drives the koi species per row (visual identity). */
+export function levelOfKana(romaji: string): number {
+    return LEVEL_OF.get(romaji) ?? 1;
+}

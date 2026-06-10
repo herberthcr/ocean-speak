@@ -37,9 +37,11 @@ export class AnimationSystem extends System {
         this.updatePlants(gameObject, position);
       }
 
-      // Komorebi: keep each koi's kana glyph pinned to the fish (upright; it doesn't rotate).
+      // Komorebi: keep each koi's kana glyph pinned to the fish (upright; it doesn't rotate),
+      // and depth-sort by Y so lower fish swim in front (cheap sense of depth).
       if (gameObject.type === 'fish') {
-        const label = gameObject.sprite.getData('kanaText') as Phaser.GameObjects.Text | undefined;
+        gameObject.sprite.setDepth(10 + position.y * 0.02);
+        const label = gameObject.sprite.getData('kanaText') as Phaser.GameObjects.Container | undefined;
         if (label) label.setPosition(gameObject.sprite.x, gameObject.sprite.y);
       }
     }

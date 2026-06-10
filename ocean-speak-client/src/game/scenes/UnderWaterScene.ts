@@ -69,6 +69,10 @@ export class UnderWaterScene extends Scene {
   // M1b: optional ja-JP voice input (ADR-0010). Click always remains the fallback.
   private voiceOn: boolean = false;
   private recognition?: SpeechRecognition;
+  // Visual juice: correct-answer streak and the pulsing halo on the target koi (early levels).
+  private streak: number = 0;
+  private targetGlow?: Phaser.GameObjects.Arc;
+  private targetGlowSprite?: Phaser.GameObjects.Sprite;
   // Text
   private textHelper!: TextHelper;
   private interactionText!: Phaser.GameObjects.Text;
@@ -130,6 +134,9 @@ export class UnderWaterScene extends Scene {
     // Add shader overlay
     this.renderingSystem.addShader(SHADERS.WATER_SHADER);
 
+    // Komorebi ambience: light shafts through the water, drifting petals, warm tint.
+    this.createKomorebiAmbience();
+
     // Register the rendering system
     this.world.addSystem(this.renderingSystem);
 
@@ -178,6 +185,112 @@ export class UnderWaterScene extends Scene {
 
   update(time: number, delta: number): void {
     this.world.update(delta);
+    // Keep the target halo pinned to its koi (runs after the ECS wrote sprite positions).
+    if (this.targetGlow && this.targetGlowSprite) {
+      this.targetGlow.setPosition(this.targetGlowSprite.x, this.targetGlowSprite.y);
+    }
+  }
+
+  // --- Komorebi ambience (V1) -----------------------------------------------------------------
+
+  private createKomorebiAmbience(): void {
+    // Light shafts (the literal komorebi): tilted gradient beams, slowly breathing.
+    [{ x: 190, rot: -0.16, a: 0.10 }, { x: 520, rot: -0.10, a: 0.07 }, { x: 830, rot: -0.20, a: 0.12 }]
+      .forEach((s, i) => {
+        const shaft = this.add.image(s.x, -30, 'lightShaft')
+          .setOrigin(0.5, 0)
+          .setRotation(s.rot)
+          .setAlpha(s.a)
+          .setTint(0xfff2c9)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setDepth(55);
+        this.tweens.add({
+          targets: shaft,
+          alpha: s.a * 0.45,
+          duration: 2600 + i * 700,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+      });
+
+    // Warm late-afternoon tint over the whole pond.
+    this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0xffc98a, 0.05)
+      .setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(56);
+
+    // Petals drifting down through the light.
+    this.add.particles(0, -10, 'petal', {
+      x: { min: 0, max: this.scale.width },
+      lifespan: 16000,
+      speedY: { min: 8, max: 20 },
+      speedX: { min: -10, max: 16 },
+      rotate: { start: 0, end: 240 },
+      alpha: { start: 0.8, end: 0.25 },
+      scale: { min: 0.7, max: 1.2 },
+      frequency: 1100,
+      quantity: 1,
+    }).setDepth(57);
+  }
+
+  // --- Juice (V3) -------------------------------------------------------------------------------
+
+  // Pulsing halo on one koi carrying the target kana (beginner help, levels 1–2, glyph stage).
+  private attachTargetGlow(romaji: string): void {
+    this.clearTargetGlow();
+    const sprite = this.fishGroup.getChildren()
+      .find((o) => (o as Phaser.GameObjects.Sprite).name === romaji) as Phaser.GameObjects.Sprite | undefined;
+    if (!sprite) return;
+    this.targetGlowSprite = sprite;
+    this.targetGlow = this.add.circle(sprite.x, sprite.y, 44)
+      .setStrokeStyle(3, 0xffe28a, 0.9)
+      .setDepth(49);
+    this.tweens.add({
+      targets: this.targetGlow,
+      scale: 1.18,
+      alpha: 0.45,
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  private clearTargetGlow(): void {
+    if (this.targetGlow) {
+      this.tweens.killTweensOf(this.targetGlow);
+      this.targetGlow.destroy();
+      this.targetGlow = undefined;
+    }
+    this.targetGlowSprite = undefined;
+  }
+
+  // Catch celebration: bubble burst + scale punch + golden flash on the koi.
+  private collectEffect(sprite: Phaser.GameObjects.Sprite): void {
+    this.add.particles(sprite.x, sprite.y, IMAGES.BUBBLES, {
+      frame: ['silverbubble', 'bluebubble'],
+      lifespan: 900,
+      speed: { min: 60, max: 140 },
+      scale: { start: 0.45, end: 0 },
+      gravityY: -40,
+      emitting: false,
+    }).setDepth(60).explode(12);
+
+    sprite.setTint(0xfff3b0);
+    this.time.delayedCall(220, () => sprite.clearTint());
+    this.tweens.add({ targets: sprite, scale: 1.7, duration: 130, yoyo: true, ease: 'Power2' });
+  }
+
+  // Floating streak counter (×2, ×3…) that grows with the run.
+  private showStreak(): void {
+    if (this.streak < 2) return;
+    const text = this.textHelper.createColoredText(
+      this.cameras.main.centerX, 120, 300, '40px', `×${this.streak}`, 'gold');
+    text.setOrigin(0.5).setScale(Math.min(1 + this.streak * 0.07, 1.7)).setAlpha(0);
+    this.tweens.add({ targets: text, alpha: 1, y: 100, duration: 200, ease: 'Back.easeOut' });
+    this.tweens.add({
+      targets: text, alpha: 0, y: 70, delay: 800, duration: 400,
+      onComplete: () => text.destroy(),
+    });
   }
 
 
@@ -576,6 +689,7 @@ export class UnderWaterScene extends Scene {
 
     if (result === 'break') {
       // Chain broken — gentle feedback, the word restarts (never punishes, ADR-0006).
+      this.streak = 0;
       this.sound.play(SOUNDS.INCORRECT_SOUND);
       this.cameras.main.shake(120, 0.002);
     } else {
@@ -595,6 +709,8 @@ export class UnderWaterScene extends Scene {
     if (!word) return;
     this.currentWord = undefined; // ignore taps until the next word arrives
     this.lastWordRomaji = word.romaji;
+    this.streak++;
+    this.showStreak();
 
     const awarded = progressStore.awardWordCard(word.romaji);
     this.inputSystem.growPlants(); // each completed word charges the crystal
@@ -747,7 +863,12 @@ export class UnderWaterScene extends Scene {
 
       if (clicked) {
         const isCorrect = this.inputSystem.handleInteraction(clicked as Phaser.GameObjects.Sprite, this.currentAnswer);
-        if (isCorrect) this.onCorrectAnswer();
+        if (isCorrect) {
+          this.collectEffect(clicked as Phaser.GameObjects.Sprite);
+          this.onCorrectAnswer();
+        } else {
+          this.streak = 0;
+        }
       }
 
       this.time.delayedCall(this.clickCooldownTime, () => { this.canClick = true; });
@@ -830,6 +951,11 @@ export class UnderWaterScene extends Scene {
     this.questionText.setVisible(true);
     this.emitRowProgress();
 
+    // Beginner help: halo one matching koi while the glyph is still shown (levels 1–2).
+    if (!recall && this.currentLevel <= 2) {
+      this.attachTargetGlow(item.romaji);
+    }
+
     if (this.cache.audio.exists(item.audio)) {
       this.sound.play(item.audio);
     }
@@ -901,6 +1027,7 @@ export class UnderWaterScene extends Scene {
     targets.forEach((sprite, i) => {
       if (i === 0) {
         this.inputSystem.displayFeedback(sprite, true, false, item.romaji, item.audio);
+        this.collectEffect(sprite);
         return;
       }
       const circle = this.add.circle(sprite.x, sprite.y, 10, 0x9fe7ec, 0.5).setDepth(1);
@@ -923,6 +1050,8 @@ export class UnderWaterScene extends Scene {
 
   private onCorrectAnswer(): void {
     this.clearQuestionTimer();
+    this.streak++;
+    this.showStreak();
 
     const romaji = this.currentAnswer;
     this.currentAnswer = ''; // no question pending: ignore taps until the next prompt
@@ -1020,6 +1149,7 @@ export class UnderWaterScene extends Scene {
       this.timeBar = undefined;
     }
     this.stopVoiceListening(); // question is over — stop the per-question mic session
+    this.clearTargetGlow();
   }
 
   showQuestionAndHandleInput(): void {

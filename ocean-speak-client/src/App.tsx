@@ -136,9 +136,9 @@ function App() {
                                 {target.mode === 'recall' ? t('panelWhichSounds') : t('panelTapKana')}
                             </p>
                             {target.mode === 'recall' ? (
-                                <div className="kana-panel__glyph kana-panel__glyph--hidden">?</div>
+                                <div key={`r-${target.romaji}`} className="kana-panel__glyph kana-panel__glyph--hidden">?</div>
                             ) : (
-                                <div className="kana-panel__glyph">{target.prompt}</div>
+                                <div key={target.prompt} className="kana-panel__glyph">{target.prompt}</div>
                             )}
                             <button className="kana-panel__audio" onClick={playAudio}>{t('listen')}</button>
                             <p className="kana-panel__romaji">{target.romaji}</p>
@@ -148,6 +148,15 @@ function App() {
                 ) : (
                     <p className="kana-panel__title">{t('panelChooseMode')}</p>
                 )}
+                {rowProgress && (() => {
+                    const total = rowProgress.row.length * rowProgress.threshold;
+                    const cur = rowProgress.row.reduce((s, k) => s + k.mastery, 0);
+                    return (
+                        <div className="kana-panel__bar" title={`${cur}/${total}`}>
+                            <i style={{ width: `${Math.round((100 * cur) / total)}%` }} />
+                        </div>
+                    );
+                })()}
                 {rowProgress && (
                     <div className="kana-panel__row">
                         {rowProgress.row.map((k) => (
@@ -180,8 +189,10 @@ function App() {
                     </button>
                 )}
                 <button className="kana-panel__codex" onClick={() => setCodexOpen(true)}>
-                    📖 {t('collection')} · {kanaOwned.length}/{KANA_ITEMS.length}
-                    {wordsOwned.length > 0 && ` · ${wordsOwned.length} 🍣`}
+                    <span key={kanaOwned.length + wordsOwned.length} className="codex-count-pop">
+                        📖 {t('collection')} · {kanaOwned.length}/{KANA_ITEMS.length}
+                        {wordsOwned.length > 0 && ` · ${wordsOwned.length} 🍣`}
+                    </span>
                 </button>
             </aside>
             {codexOpen && <Codex owned={owned} onClose={() => setCodexOpen(false)} />}

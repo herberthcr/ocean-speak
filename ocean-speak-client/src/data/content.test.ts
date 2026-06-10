@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { KANA_ITEMS, LEVELS, MAX_LEVEL, poolForLevel, itemByRomaji, VOCAB_ITEMS, wordsForLevel, vocabByRomaji } from './content';
+import { KANA_ITEMS, LEVELS, MAX_LEVEL, poolForLevel, itemByRomaji, VOCAB_ITEMS, wordsForLevel, vocabByRomaji, levelOfKana } from './content';
 
 describe('content data', () => {
     it('has the 46 base hiragana', () => {
@@ -67,6 +67,13 @@ describe('vocab (modo palabras)', () => {
         expect(wordsForLevel(MAX_LEVEL).length).toBe(VOCAB_ITEMS.length);
         // pools only grow
         expect(wordsForLevel(3).length).toBeGreaterThanOrEqual(lvl1.length);
+    });
+
+    it('maps each kana to the level that introduces it', () => {
+        expect(levelOfKana('a')).toBe(1);
+        expect(levelOfKana('ka')).toBe(2);
+        expect(levelOfKana('n')).toBe(10);
+        expect(levelOfKana('zzz')).toBe(1); // fallback
     });
 
     it('resolves vocab by romaji (sushi)', () => {

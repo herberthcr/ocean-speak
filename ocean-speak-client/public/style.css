@@ -21,12 +21,53 @@ body {
     width: 240px;
     box-sizing: border-box;
     padding: 20px 16px;
-    background-color: #0d2a3f;
-    border: 2px solid #39c0c8;
-    border-radius: 16px;
+    background: rgba(13, 42, 63, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(57, 192, 200, 0.5);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 0 24px rgba(57, 192, 200, 0.06);
     text-align: center;
     color: #eaf6f8;
     font-family: 'Noto Sans JP', Arial, sans-serif;
+}
+
+/* Glyph pops in on every new challenge (the key change re-mounts the div). */
+@keyframes kana-pop-in {
+    0% { transform: scale(0.55); opacity: 0; }
+    60% { transform: scale(1.12); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.kana-panel__glyph {
+    animation: kana-pop-in 0.35s ease-out;
+}
+
+/* Level progress bar (sum of row mastery). */
+.kana-panel__bar {
+    margin-top: 14px;
+    height: 8px;
+    background: #0a2030;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.kana-panel__bar i {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #39c0c8, #ffd479);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+/* Collection counter pulses when a card is earned. */
+@keyframes count-pop {
+    50% { transform: scale(1.25); color: #ffd479; }
+}
+
+.codex-count-pop {
+    display: inline-block;
+    animation: count-pop 0.5s ease;
 }
 
 .kana-panel__title {

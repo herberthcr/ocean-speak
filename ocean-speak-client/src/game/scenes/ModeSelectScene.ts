@@ -1,6 +1,6 @@
 import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
-import { SCENES, BACKGROUNDS, SHADERS, IMAGES, SOUNDS, KANA } from '../global/Constants';
+import { SCENES, BACKGROUNDS, IMAGES, SOUNDS, KANA } from '../global/Constants';
 import { progressStore } from '../../state/progressStore';
 import { levelConfig, levelLabel, KANA_ITEMS } from '../../data/content';
 import { splitCollection } from '../../domain/progress';
@@ -31,8 +31,18 @@ export class ModeSelectScene extends Scene {
         const lang = currentLang();
         this.cameras.main.fadeIn(600, 0, 20, 35);
 
-        this.add.image(0, 0, BACKGROUNDS.BLUE_BACKGROUND).setOrigin(0);
-        this.add.shader(SHADERS.TUNNEL_SHADER, 0, 0, this.scale.width, this.scale.height).setOrigin(0);
+        // Komorebi menu: the pond itself, dimmed, with light shafts — no arcade tunnel shader.
+        this.add.image(0, 0, BACKGROUNDS.OCEAN_COMPLETE).setOrigin(0);
+        this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x05131f, 0.55).setOrigin(0);
+        [{ x: 240, rot: -0.16, a: 0.12 }, { x: 700, rot: -0.22, a: 0.09 }].forEach((s, i) => {
+            const shaft = this.add.image(s.x, -30, 'lightShaft')
+                .setOrigin(0.5, 0).setRotation(s.rot).setAlpha(s.a)
+                .setTint(0xfff2c9).setBlendMode(Phaser.BlendModes.ADD);
+            this.tweens.add({
+                targets: shaft, alpha: s.a * 0.5, duration: 3000 + i * 800,
+                yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+        });
         this.add.particles(0, 0, IMAGES.BUBBLES, {
             x: { min: 0, max: this.scale.width },
             y: { min: 0, max: this.scale.height },

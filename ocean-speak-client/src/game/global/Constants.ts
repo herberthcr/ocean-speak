@@ -323,6 +323,18 @@ export const FISH_ANIMATIONS = {
     SWIM_GLOBE: 'gLobeFish'
 };
 
+// Komorebi: koi species per kana row — each row of the gojūon gets its own fish color, so the
+// pond reads visually ("the K row are the golden ones"). Levels cycle through this order.
+export const KOI_SPECIES = [
+    FISH_ANIMATIONS.SWIM_RED,
+    FISH_ANIMATIONS.SWIM_ORANGE,
+    FISH_ANIMATIONS.SWIM_BLUE,
+    FISH_ANIMATIONS.SWIM_GREEN,
+    FISH_ANIMATIONS.SWIM_PURPLE,
+    FISH_ANIMATIONS.SWIM_GREY,
+    FISH_ANIMATIONS.SWIM_GLOBE,
+];
+
 export const PLANTS_ANIMATIONS = {
     PLANT_ANIM_GREEN: 'greenPlant',
     PLANT_ANIM_PURPLE: 'purplePlant',

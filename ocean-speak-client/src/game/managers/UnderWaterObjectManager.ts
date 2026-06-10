@@ -3,7 +3,8 @@ import { ECSWorld } from '../ecs/ECSWorld';
 import { Position } from '../components/Position';
 import { Velocity } from '../components/Velocity';
 import { GameObjectComponent } from '../components/GameObjectComponent';
-import { FISH, FISH_ANIMATIONS, DIFFICULTY, PLANTS, SCREEN, PLANTS_ANIMATIONS, KANA } from '../global/Constants';
+import { FISH, FISH_ANIMATIONS, DIFFICULTY, PLANTS, SCREEN, KANA, KOI_SPECIES } from '../global/Constants';
+import { levelOfKana } from '../../data/content';
 import type { KanaItem } from '../../domain/kana-matching';
 
 export class UnderWaterObjectManager {
@@ -13,7 +14,6 @@ export class UnderWaterObjectManager {
 
   /// TODO REFACTOR WITH VALUES FROM CONSTANT FILE
   private fishTypes = Object.values(FISH_ANIMATIONS);
-  private plantsTypes = Object.values(PLANTS_ANIMATIONS);
   private fishSpeed = 50;
   private createdFish: Set<string> = new Set();  // Tracks created fish by type
   private createdPlants: Set<string> = new Set();  // Tracks created plants by type
@@ -298,13 +298,13 @@ export class UnderWaterObjectManager {
         }
       }
 
-      const type = Phaser.Math.RND.pick(this.plantsTypes); // Random type
+      // Komorebi: the chargeable reward is a faceted crystal gem (runtime texture), not a plant.
+      const type = 'crystalGem';
       const entityId = this.world.createEntity();
-      const sprite = this.scene.add.sprite(x, y, 'sprites').play(type).setDepth(5).setOrigin(0.5, 1);
+      const sprite = this.scene.add.sprite(x, y, 'crystalGem').setDepth(5).setOrigin(0.5, 1);
       const gameObject: GameObjectComponent = { sprite, type: 'plant', grouped: true };
       const position: Position = { x, y };
 
-      // Assign a name to the plant sprite
       sprite.setName(type);
       // Store the entityId in the sprite for later reference
       sprite.setData('entityId', entityId); // Store the entityId in sprite data
@@ -313,33 +313,29 @@ export class UnderWaterObjectManager {
       this.world.addComponent(entityId, 'gameObject', gameObject);
       this.world.addComponent(entityId, 'size', { currentSize: PLANTS.PLANTS_SCALE }); // Initial size
 
-      // Make the plant interactive
+      // Make the crystal interactive (legacy contract; charging still goes through growPlants)
       sprite.setInteractive({ useHandCursor: true });
 
-      // Add to plant group
+      // Add to plant group (the reward group — kept under its legacy name, surgical fork)
       plantGroup.add(sprite);
 
-      this.addPlantSway(sprite);
+      // Mystic glow pulse instead of plant sway.
+      this.scene.tweens.add({
+        targets: sprite,
+        alpha: 0.78,
+        duration: Phaser.Math.Between(1400, 2200),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
 
       if (!this.createdPlants.has(type)) {
-        // Logic for creating a plant, e.g., adding it to the scene
-        console.log(`Creating plant: ${type}`);
-        this.createdPlants.add(type);  // Mark plant as created
+        this.createdPlants.add(type);  // Mark crystal as created
       }
 
     }
   }
 
-  private addPlantSway(sprite: Phaser.GameObjects.Sprite): void {
-    this.scene.tweens.add({
-      targets: sprite,
-      angle: Phaser.Math.Between(PLANTS.SWAY_ANGLE.MIN, PLANTS.SWAY_ANGLE.MAX),
-      duration: Phaser.Math.Between(PLANTS.SWAY_DURATION.MIN, PLANTS.SWAY_DURATION.MAX),
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-  }
   // Check if a specific fish has already been created
   hasFish(fishType: string): boolean {
     
@@ -359,17 +355,23 @@ export class UnderWaterObjectManager {
     this.assignKanaItem(sprite, Phaser.Math.RND.pick(this.kanaPool));
   }
 
-  /** Attach a specific kana to a koi: glyph label (Noto) + romaji as the match name. */
+  /** Attach a specific kana to a koi: species by row, plate-backed glyph, romaji as match name. */
   private assignKanaItem(sprite: Phaser.GameObjects.Sprite, item: KanaItem): void {
     sprite.setName(item.romaji);
-    const label = this.scene.add.text(sprite.x, sprite.y, item.prompt, {
+    // Visual identity: every kana row swims as its own koi species/color.
+    sprite.play(KOI_SPECIES[(levelOfKana(item.romaji) - 1) % KOI_SPECIES.length]);
+
+    // Legibility: the glyph sits on a soft dark plate so it reads over any background.
+    const plate = this.scene.add.circle(0, 2, 30, 0x05131f, 0.45);
+    const text = this.scene.add.text(0, 0, item.prompt, {
       fontFamily: KANA.FONT_FAMILY,
       fontSize: KANA.FONT_SIZE,
       fontStyle: KANA.FONT_STYLE,
       color: KANA.COLOR,
       stroke: KANA.STROKE,
       strokeThickness: KANA.STROKE_THICKNESS,
-    }).setOrigin(0.5).setDepth(KANA.DEPTH);
+    }).setOrigin(0.5);
+    const label = this.scene.add.container(sprite.x, sprite.y, [plate, text]).setDepth(KANA.DEPTH);
     sprite.setData('kanaText', label);
     this.createdKana.add(item.romaji);
   }

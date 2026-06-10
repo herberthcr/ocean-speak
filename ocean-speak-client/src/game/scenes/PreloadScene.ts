@@ -66,6 +66,7 @@ export class PreloadScene extends Scene {
 
     create() {
         this.input.setDefaultCursor('url(assets/cursor.png), pointer');  // Custom cursor for student
+        this.generateKomorebiTextures();
 
         // Boot into the Komorebi mode-select menu (Relax/Tiempo/Libre); the legacy Splash/Menu
         // remain for reference. Gate on the JP font so kana render crisp from the first frame.
@@ -79,5 +80,31 @@ export class PreloadScene extends Scene {
         } else {
             startMenu();
         }
+    }
+
+    // Komorebi look: small textures drawn at runtime (no art assets needed for the demo).
+    private generateKomorebiTextures(): void {
+        // Faceted crystal gem — replaces Ocean Speak's plants as the chargeable reward.
+        const gem = this.make.graphics({ x: 0, y: 0 }, false);
+        gem.fillStyle(0x9ff1f6, 1); gem.fillTriangle(32, 4, 8, 34, 56, 34);   // crown
+        gem.fillStyle(0x39c0c8, 1); gem.fillTriangle(8, 34, 32, 84, 32, 34);  // left facet
+        gem.fillStyle(0x1f6f78, 1); gem.fillTriangle(56, 34, 32, 84, 32, 34); // right facet
+        gem.lineStyle(2, 0xffffff, 0.7); gem.lineBetween(14, 30, 30, 12);     // glint
+        gem.generateTexture('crystalGem', 64, 88);
+        gem.destroy();
+
+        // Komorebi light shaft (white→transparent vertical gradient; tinted/rotated in scenes).
+        const shaft = this.make.graphics({ x: 0, y: 0 }, false);
+        shaft.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 0.55, 0.55, 0, 0);
+        shaft.fillRect(0, 0, 180, 620);
+        shaft.generateTexture('lightShaft', 180, 620);
+        shaft.destroy();
+
+        // Falling petal/leaf.
+        const petal = this.make.graphics({ x: 0, y: 0 }, false);
+        petal.fillStyle(0xf6c9d4, 1);
+        petal.fillEllipse(8, 5, 14, 8);
+        petal.generateTexture('petal', 16, 10);
+        petal.destroy();
     }
 }
