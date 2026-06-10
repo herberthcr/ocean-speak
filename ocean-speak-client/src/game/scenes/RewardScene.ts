@@ -12,20 +12,29 @@ export class RewardScene extends Scene {
         super(SCENES.REWARD);
     }
 
-    create(data: { level: number; label: string; cards: string[]; isLast: boolean }): void {
+    create(data: { level: number; label: string; cards: string[]; isLast: boolean; stars?: number }): void {
         const { width, height } = this.scale;
         const cx = width / 2;
 
         const root = this.add.container(0, 0).setAlpha(0);
         root.add(this.add.rectangle(0, 0, width, height, 0x05131f, 0.88).setOrigin(0));
 
-        root.add(this.add.text(cx, 84, '¡Nivel completo!', {
+        root.add(this.add.text(cx, 80, '¡Nivel completo!', {
             fontFamily: 'Arial', fontSize: '46px', fontStyle: 'bold', color: '#ffd479',
         }).setOrigin(0.5));
-        root.add(this.add.text(cx, 138, `Nivel ${data.level} · ${data.label}  —  ${data.cards.length} cartas`, {
+        root.add(this.add.text(cx, 132, `Nivel ${data.level} · ${data.label}  —  ${data.cards.length} cartas`, {
             fontFamily: 'Arial', fontSize: '22px', color: '#9fe7ec',
         }).setOrigin(0.5));
-        root.add(this.add.text(cx, 182, 'Toca una carta para escucharla', {
+
+        // Time-mode stars (1–3 by speed/timeouts).
+        if (data.stars && data.stars > 0) {
+            const starsText = this.add.text(cx, 168, '⭐'.repeat(data.stars), { fontSize: '30px' })
+                .setOrigin(0.5).setScale(0);
+            root.add(starsText);
+            this.tweens.add({ targets: starsText, scale: 1, delay: 500, duration: 400, ease: 'Back.easeOut' });
+        }
+
+        root.add(this.add.text(cx, data.stars ? 202 : 178, 'Toca una carta para escucharla', {
             fontFamily: 'Arial', fontSize: '17px', color: '#eaf6f8',
         }).setOrigin(0.5));
 

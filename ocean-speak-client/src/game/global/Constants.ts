@@ -93,7 +93,8 @@ export const SCENES = {
     UNDERWATER_SCENE: 'UnderWaterScene',
     TEACH: 'TeachScene',
     REWARD: 'RewardScene',
-    LESSON: 'LessonScene'
+    LESSON: 'LessonScene',
+    MODE_SELECT: 'ModeSelectScene'
 };
 
 // Komorebi: collectible kana card visuals (ADR-0011 / docs/systems/card-system.md).
@@ -129,6 +130,8 @@ export const KOI_POND = {
     // Interleaved review (SRS-lite): chance that a question re-asks a mastered kana from an
     // earlier row instead of the current one.
     REVIEW_CHANCE: 0.2,
+    // Time mode: per-question limit when the level doesn't define one (early levels have 0 = calm).
+    TIME_MODE_DEFAULT_MS: 8000,
 };
 
 export const SOUNDS = {

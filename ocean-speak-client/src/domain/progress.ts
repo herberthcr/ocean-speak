@@ -13,10 +13,12 @@ export interface ProgressState {
     collection: string[];
     /** Highest level the player is working on (1-based). */
     currentLevel: number;
+    /** Best stars (1–3) earned per level in Time mode, keyed by level number. */
+    stars: Record<string, number>;
 }
 
 export function emptyProgress(): ProgressState {
-    return { taught: [], mastery: {}, collection: [], currentLevel: 1 };
+    return { taught: [], mastery: {}, collection: [], currentLevel: 1, stars: {} };
 }
 
 export function masteryOf(s: ProgressState, romaji: string): number {
@@ -74,6 +76,18 @@ export function resetMastery(s: ProgressState, romaji: string[]): ProgressState 
     const mastery = { ...s.mastery };
     for (const r of romaji) delete mastery[r];
     return { ...s, mastery };
+}
+
+/** Record stars earned for a level (Time mode); keeps the best result. */
+export function setLevelStars(s: ProgressState, level: number, stars: number): ProgressState {
+    const key = String(level);
+    const best = Math.max(s.stars[key] ?? 0, stars);
+    return { ...s, stars: { ...s.stars, [key]: best } };
+}
+
+/** Best stars earned for a level (0 = never completed in Time mode). */
+export function starsFor(s: ProgressState, level: number): number {
+    return s.stars[String(level)] ?? 0;
 }
 
 /**

@@ -13,6 +13,8 @@ import {
     resetMastery,
     isRecallStage,
     reviewCandidates,
+    setLevelStars,
+    starsFor,
     type ProgressState,
 } from '../domain/progress';
 
@@ -106,6 +108,16 @@ class ProgressStore {
     /** Mastered kana from earlier rows, eligible for interleaved review. */
     reviewCandidates(poolRomaji: string[], rowRomaji: string[], threshold: number): string[] {
         return reviewCandidates(this.state, poolRomaji, rowRomaji, threshold);
+    }
+
+    /** Record Time-mode stars for a level (best result kept). */
+    setLevelStars(level: number, stars: number): void {
+        this.state = setLevelStars(this.state, level, stars);
+        this.persist();
+    }
+
+    starsFor(level: number): number {
+        return starsFor(this.state, level);
     }
 
     /** Reset all progress (for the Codex "reiniciar" affordance / fresh demos). */

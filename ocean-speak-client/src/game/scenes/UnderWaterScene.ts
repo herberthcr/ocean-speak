@@ -52,8 +52,10 @@ export class UnderWaterScene extends Scene {
   private speechRecognitionOn: string = 'off';
   // Komorebi koi pond
   private currentLevel: number = KOI_POND.START_LEVEL;
-  private mode: 'relax' | 'time' = 'relax';
+  private mode: 'relax' | 'time' | 'free' = 'relax';
   private questionTimer?: Phaser.Time.TimerEvent;
+  private timeBar?: Phaser.GameObjects.Rectangle;
+  private levelTimeouts: number = 0;
   private pondInputReady: boolean = false;
   // Text
   private textHelper!: TextHelper;
@@ -69,13 +71,14 @@ export class UnderWaterScene extends Scene {
     super('UnderWaterScene');
   }
 
-  init(data: { playerName: string, isTeacher: boolean, mode: string, difficulty: string, teacherName: string, speechRecognitionOn: string }) {
+  init(data: { playerName: string, isTeacher: boolean, mode: string, difficulty: string, teacherName: string, speechRecognitionOn: string, pondMode?: 'relax' | 'time' | 'free' }) {
     this.playerName = data.playerName;
     this.playerType = data.isTeacher ? ROLES.TEACHER : ROLES.STUDENT;
     this.gameMode = data.mode;
     this.difficulty = data.difficulty;
     this.teacherName = data.teacherName;
     this.speechRecognitionOn = data.speechRecognitionOn;
+    this.mode = data.pondMode ?? 'relax'; // Komorebi pond mode (ModeSelectScene)
   }
 
   create(): void {
@@ -433,14 +436,59 @@ export class UnderWaterScene extends Scene {
   }
 
   startSoloMode(): void {
-    // Komorebi: enter the Escriba's koi pond — calm recognition by click.
-    // Level flow (ADR-0018): LESSON (row intro) → PLAY (×N per kana) → REWARD (cards).
+    // Komorebi: enter the Escriba's koi pond.
+    // Relax/Time flow (ADR-0018): LESSON (row intro) → PLAY (×N per kana) → REWARD (cards).
+    // Free mode: no questions — tap any koi to hear it.
     this.currentLevel = progressStore.currentLevel;
     this.updateTurnText('Cabaña del Escriba');
     this.textHelper.updateTextColor(this.turnText, 'yellow');
     this.interactionText.setVisible(false); // legacy HUD; progress lives in the side panel
+
+    if (this.mode === 'free') {
+      this.startFreeMode();
+      return;
+    }
     this.registerPondInput();
     this.beginLevel(false);
+  }
+
+  // Free exploration: every koi is tappable; tapping plays its pronunciation and shows the
+  // romaji. No questions, no progress, no reward — a sandbox to wander and listen.
+  private startFreeMode(): void {
+    this.objectManager.reassignKana(this.fishGroup, poolForLevel(this.currentLevel));
+    this.announceFreeMode();
+    this.questionText.setText('Toca cualquier koi  🐟');
+    this.textHelper.updateTextColor(this.questionText, 'cyan');
+    this.questionText.setVisible(true);
+    EventBus.emit('row-progress', null);
+    EventBus.emit('kana-target', {
+      prompt: '', romaji: '', audio: '',
+      level: this.currentLevel, label: 'Libre', mode: 'free', review: false,
+    });
+
+    this.input.enabled = true;
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this.canClick) return;
+      this.canClick = false;
+
+      const clicked = this.fishGroup.getChildren().find((obj) =>
+        (obj as Phaser.GameObjects.Sprite).getBounds().contains(pointer.x, pointer.y));
+      if (clicked) {
+        const item = itemByRomaji((clicked as Phaser.GameObjects.Sprite).name);
+        if (item) {
+          this.inputSystem.displayFeedback(clicked as Phaser.GameObjects.Sprite, true, false, item.romaji, item.audio);
+          EventBus.emit('kana-target', {
+            prompt: item.prompt, romaji: item.romaji, audio: item.audio,
+            level: this.currentLevel, label: 'Libre', mode: 'free', review: false,
+          });
+        }
+      }
+      this.time.delayedCall(this.clickCooldownTime, () => { this.canClick = true; });
+    });
+  }
+
+  private announceFreeMode(): void {
+    this.updateWaitingMessage('Modo libre — toca y escucha', 'student');
   }
 
   // Level entry ritual: optional camera fade, fresh koi labels (new row guaranteed on the pond),
@@ -450,6 +498,7 @@ export class UnderWaterScene extends Scene {
     this.currentAnswer = '';
     this.questionText.setText('');
     this.clearQuestionTimer();
+    this.levelTimeouts = 0; // fresh slate for Time-mode stars
 
     const cfg = levelConfig(this.currentLevel);
     const relabel = () => {
@@ -606,10 +655,18 @@ export class UnderWaterScene extends Scene {
       this.sound.play(item.audio);
     }
 
-    const limit = levelConfig(this.currentLevel).timeLimitMs;
-    if (this.mode === 'time' && limit > 0) {
+    if (this.mode === 'time') {
+      const limit = levelConfig(this.currentLevel).timeLimitMs || KOI_POND.TIME_MODE_DEFAULT_MS;
       this.questionTimer = this.time.delayedCall(limit, () => this.onQuestionTimeout());
+      this.startTimeBar(limit);
     }
+  }
+
+  // Shrinking countdown bar under the question text (Time mode).
+  private startTimeBar(limitMs: number): void {
+    this.timeBar = this.add.rectangle(this.cameras.main.centerX - 150, 632, 300, 8, 0x39c0c8)
+      .setOrigin(0, 0.5).setDepth(250);
+    this.tweens.add({ targets: this.timeBar, scaleX: 0, duration: limitMs, ease: 'Linear' });
   }
 
   private onCorrectAnswer(): void {
@@ -635,9 +692,10 @@ export class UnderWaterScene extends Scene {
     }
   }
 
-  // Time mode: a timeout carries no penalty (pedagogy) — just re-pose.
+  // Time mode: a timeout carries no penalty (pedagogy) — it just re-poses and costs stars.
   private onQuestionTimeout(): void {
     if (this.gameOver) return;
+    this.levelTimeouts++;
     this.nextKanaQuestion();
   }
 
@@ -648,9 +706,16 @@ export class UnderWaterScene extends Scene {
     const cfg = levelConfig(this.currentLevel);
     const isLast = this.currentLevel >= MAX_LEVEL;
 
+    // Time-mode stars: clean run = 3, a couple of timeouts = 2, more = 1. Best kept per level.
+    let stars = 0;
+    if (this.mode === 'time') {
+      stars = this.levelTimeouts === 0 ? 3 : this.levelTimeouts <= 2 ? 2 : 1;
+      progressStore.setLevelStars(cfg.level, stars);
+    }
+
     this.input.enabled = false;
     this.scene.pause();
-    this.scene.launch(SCENES.REWARD, { level: cfg.level, label: cfg.label, cards: cfg.adds, isLast });
+    this.scene.launch(SCENES.REWARD, { level: cfg.level, label: cfg.label, cards: cfg.adds, isLast, stars });
     this.events.once('reward-done', (opts?: { repeat?: boolean }) => {
       if (opts?.repeat) {
         this.repeatLevel();
@@ -697,6 +762,11 @@ export class UnderWaterScene extends Scene {
   private clearQuestionTimer(): void {
     this.questionTimer?.remove();
     this.questionTimer = undefined;
+    if (this.timeBar) {
+      this.tweens.killTweensOf(this.timeBar);
+      this.timeBar.destroy();
+      this.timeBar = undefined;
+    }
   }
 
   showQuestionAndHandleInput(): void {

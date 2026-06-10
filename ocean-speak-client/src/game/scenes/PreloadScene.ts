@@ -63,24 +63,17 @@ export class PreloadScene extends Scene {
     create() {
         this.input.setDefaultCursor('url(assets/cursor.png), pointer');  // Custom cursor for student
 
-        // M1a launches straight into the Escriba's koi pond (solo mode); Splash/Menu return with
-        // the overworld in M1c. Gate on the JP font so kana render crisp from the first frame.
-        const startPond = () => this.scene.start(SCENES.UNDERWATER_SCENE, {
-            playerName: 'Aprendiz',
-            isTeacher: false,
-            mode: 'solo',
-            difficulty: 'easy',
-            teacherName: '',
-            speechRecognitionOn: 'off',
-        });
+        // Boot into the Komorebi mode-select menu (Relax/Tiempo/Libre); the legacy Splash/Menu
+        // remain for reference. Gate on the JP font so kana render crisp from the first frame.
+        const startMenu = () => this.scene.start(SCENES.MODE_SELECT);
 
         if (document.fonts?.load) {
             Promise.all([
                 document.fonts.load('400 44px "Noto Sans JP"'),
                 document.fonts.load('700 44px "Noto Sans JP"'),
-            ]).then(() => startPond()).catch(() => startPond());
+            ]).then(() => startMenu()).catch(() => startMenu());
         } else {
-            startPond();
+            startMenu();
         }
     }
 }

@@ -11,6 +11,8 @@ import {
     resetMastery,
     isRecallStage,
     reviewCandidates,
+    setLevelStars,
+    starsFor,
 } from './progress';
 
 describe('recordCorrect', () => {
@@ -74,6 +76,20 @@ describe('resetMastery', () => {
         const reset = resetMastery(s, ['a']);
         expect(masteryOf(reset, 'a')).toBe(0);
         expect(masteryOf(reset, 'ka')).toBe(1);
+    });
+});
+
+describe('setLevelStars / starsFor', () => {
+    it('stores stars per level and keeps the best result', () => {
+        let s = emptyProgress();
+        expect(starsFor(s, 1)).toBe(0);
+        s = setLevelStars(s, 1, 2);
+        expect(starsFor(s, 1)).toBe(2);
+        s = setLevelStars(s, 1, 1);   // worse run
+        expect(starsFor(s, 1)).toBe(2); // best kept
+        s = setLevelStars(s, 1, 3);
+        expect(starsFor(s, 1)).toBe(3);
+        expect(starsFor(s, 2)).toBe(0); // other levels untouched
     });
 });
 
