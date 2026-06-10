@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { KANA_ITEMS } from '../data/content';
+import { KANA_ITEMS, vocabByRomaji } from '../data/content';
+import { splitCollection } from '../domain/progress';
 import { progressStore } from '../state/progressStore';
 
 interface CodexProps {
@@ -10,9 +11,11 @@ interface CodexProps {
 /**
  * Collection album (ADR-0011, Phase 1). Every kana is a slot: owned cards show the glyph and flip
  * to reveal the reading + play audio; unearned ones are gaps — literally the kana left to learn.
+ * Word cards (modo palabras) appear in their own section as they are earned.
  */
 export function Codex({ owned, onClose }: CodexProps) {
-    const ownedSet = new Set(owned);
+    const { kana, words } = splitCollection(owned);
+    const kanaSet = new Set(kana);
     const [flipped, setFlipped] = useState<string | null>(null);
 
     const play = (audio: string) => {
@@ -23,7 +26,7 @@ export function Codex({ owned, onClose }: CodexProps) {
         <div className="codex-overlay" onClick={onClose}>
             <div className="codex" onClick={(e) => e.stopPropagation()}>
                 <header className="codex__head">
-                    <h2>Colección · {owned.length}/{KANA_ITEMS.length}</h2>
+                    <h2>Colección · {kana.length}/{KANA_ITEMS.length}</h2>
                     <div className="codex__actions">
                         <button
                             className="codex__reset"
@@ -41,7 +44,7 @@ export function Codex({ owned, onClose }: CodexProps) {
                 </header>
                 <div className="codex__grid">
                     {KANA_ITEMS.map((item) => {
-                        const has = ownedSet.has(item.romaji);
+                        const has = kanaSet.has(item.romaji);
                         const isFlipped = flipped === item.romaji;
                         return (
                             <button
@@ -64,6 +67,35 @@ export function Codex({ owned, onClose }: CodexProps) {
                         );
                     })}
                 </div>
+                {words.length > 0 && (
+                    <>
+                        <h3 className="codex__subhead">🍣 Palabras · {words.length}</h3>
+                        <div className="codex__grid codex__grid--words">
+                            {words.map((romaji) => {
+                                const v = vocabByRomaji(romaji);
+                                if (!v) return null;
+                                const key = `word:${romaji}`;
+                                const isFlipped = flipped === key;
+                                return (
+                                    <button
+                                        key={key}
+                                        className="codex-card codex-card--owned codex-card--word"
+                                        title="Voltear / escuchar"
+                                        onClick={() => {
+                                            const next = isFlipped ? null : key;
+                                            setFlipped(next);
+                                            if (next) play(v.audio);
+                                        }}
+                                    >
+                                        {isFlipped
+                                            ? <span className="codex-card__back">{v.romaji}<br /><small>{v.meaning}</small></span>
+                                            : <span className="codex-card__word">{v.reading}</span>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );

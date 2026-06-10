@@ -3,8 +3,9 @@ import { EventBus } from '../EventBus';
 import { SCENES, BACKGROUNDS, SHADERS, IMAGES, SOUNDS, KANA } from '../global/Constants';
 import { progressStore } from '../../state/progressStore';
 import { levelConfig, KANA_ITEMS } from '../../data/content';
+import { splitCollection } from '../../domain/progress';
 
-type PondMode = 'relax' | 'time' | 'free';
+type PondMode = 'relax' | 'time' | 'free' | 'words';
 
 interface ModeOption {
     mode: PondMode;
@@ -48,19 +49,24 @@ export class ModeSelectScene extends Scene {
 
         const level = progressStore.currentLevel;
         const cfg = levelConfig(level);
-        this.add.text(cx, 215, `Nivel ${cfg.level} · ${cfg.label}    ·    Cartas: ${progressStore.collection().length}/${KANA_ITEMS.length}`, {
+        const { kana, words } = splitCollection(progressStore.collection());
+        const cardsLine = `Nivel ${cfg.level} · ${cfg.label}    ·    Cartas: ${kana.length}/${KANA_ITEMS.length}`
+            + (words.length > 0 ? `    ·    Palabras: ${words.length}` : '');
+        this.add.text(cx, 215, cardsLine, {
             fontFamily: 'Arial', fontSize: '18px', color: '#eaf6f8',
         }).setOrigin(0.5);
 
         const options: ModeOption[] = [
             { mode: 'relax', emoji: '🧘', title: 'Relax', desc: 'Aprende a tu ritmo, sin reloj' },
             { mode: 'time', emoji: '⏱️', title: 'Tiempo', desc: 'Contra reloj — gana estrellas' },
+            { mode: 'words', emoji: '🍣', title: 'Palabras', desc: 'Forma palabras tocando los koi en orden' },
             { mode: 'free', emoji: '🐟', title: 'Libre', desc: 'Toca cualquier koi y escúchalo' },
         ];
-        options.forEach((o, i) => this.makeButton(cx, 330 + i * 118, o));
+        options.forEach((o, i) => this.makeButton(cx, 298 + i * 112, o));
 
         // Clear the side panel while in the menu.
         EventBus.emit('kana-target', null);
+        EventBus.emit('word-target', null);
         EventBus.emit('row-progress', null);
         EventBus.emit('current-scene-ready', this);
     }

@@ -3,6 +3,7 @@ import { IRefPhaserGame, PhaserGame } from './game/PhaserGame';
 import { EventBus } from './game/EventBus';
 import { progressStore } from './state/progressStore';
 import { KANA_ITEMS } from './data/content';
+import { splitCollection } from './domain/progress';
 import { Codex } from './components/Codex';
 
 interface KanaTarget {
@@ -31,12 +32,22 @@ interface RowProgress {
     row: RowKana[];
 }
 
+interface WordTarget {
+    reading: string;
+    romaji: string;
+    meaning: string;
+    audio: string;
+    /** Spelling slots, tapped glyphs revealed (e.g. ['す','＿']). */
+    slots: string[];
+}
+
 function App() {
     //  References to the PhaserGame component (game and scene are exposed)
     const phaserRef = useRef<IRefPhaserGame | null>(null);
 
     // Mirrored from the koi pond (UnderWaterScene) via EventBus.
     const [target, setTarget] = useState<KanaTarget | null>(null);
+    const [wordTarget, setWordTarget] = useState<WordTarget | null>(null);
     const [rowProgress, setRowProgress] = useState<RowProgress | null>(null);
     const [owned, setOwned] = useState<string[]>(progressStore.collection());
     const [codexOpen, setCodexOpen] = useState(false);
@@ -47,16 +58,20 @@ function App() {
         && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
 
     useEffect(() => {
-        const onTarget = (t: KanaTarget | null) => setTarget(t);
+        // kana-target and word-target are mutually exclusive panel states (cross-clear).
+        const onTarget = (t: KanaTarget | null) => { setTarget(t); if (t) setWordTarget(null); };
+        const onWord = (w: WordTarget | null) => { setWordTarget(w); if (w) setTarget(null); };
         const onRow = (r: RowProgress | null) => setRowProgress(r);
         const onProgress = (s: { collection: string[] }) => setOwned(s.collection);
         const onVoiceState = (on: boolean) => setVoiceOn(on);
         EventBus.on('kana-target', onTarget);
+        EventBus.on('word-target', onWord);
         EventBus.on('row-progress', onRow);
         EventBus.on('progress-changed', onProgress);
         EventBus.on('voice-state', onVoiceState);
         return () => {
             EventBus.off('kana-target', onTarget);
+            EventBus.off('word-target', onWord);
             EventBus.off('row-progress', onRow);
             EventBus.off('progress-changed', onProgress);
             EventBus.off('voice-state', onVoiceState);
@@ -75,11 +90,26 @@ function App() {
         new Audio(`assets/audio/${target.audio}.mp3`).play().catch(() => { /* needs a gesture */ });
     };
 
+    const playWordAudio = () => {
+        if (!wordTarget) return;
+        new Audio(`assets/audio/${wordTarget.audio}.mp3`).play().catch(() => { /* needs a gesture */ });
+    };
+
+    const { kana: kanaOwned, words: wordsOwned } = splitCollection(owned);
+
     return (
         <div id="app">
             <PhaserGame ref={phaserRef} />
             <aside className="kana-panel">
-                {target ? (
+                {wordTarget ? (
+                    <>
+                        <p className="kana-panel__title">🍣 Forma la palabra</p>
+                        <div className="kana-panel__slots">{wordTarget.slots.join(' ')}</div>
+                        <p className="kana-panel__meaning">{wordTarget.meaning}</p>
+                        <button className="kana-panel__audio" onClick={playWordAudio}>🔊 Escuchar</button>
+                        <p className="kana-panel__romaji">{wordTarget.romaji}</p>
+                    </>
+                ) : target ? (
                     target.mode === 'free' ? (
                         <>
                             <p className="kana-panel__title">🐟 Modo libre</p>
@@ -144,7 +174,8 @@ function App() {
                     </button>
                 )}
                 <button className="kana-panel__codex" onClick={() => setCodexOpen(true)}>
-                    📖 Colección · {owned.length}/{KANA_ITEMS.length}
+                    📖 Colección · {kanaOwned.length}/{KANA_ITEMS.length}
+                    {wordsOwned.length > 0 && ` · ${wordsOwned.length} 🍣`}
                 </button>
             </aside>
             {codexOpen && <Codex owned={owned} onClose={() => setCodexOpen(false)} />}

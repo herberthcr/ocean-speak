@@ -10,8 +10,10 @@ import { ECSWorld } from '../ecs/ECSWorld';
 import { TextHelper } from '../global/TextHelper'
 import { SCREEN, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, FISH_ANIMATIONS, PLANTS_ANIMATIONS, SOUNDS, DIFFICULTY, ROLES, AQUATIC_CHARACTERS, COLOR_THEMES, PLAYER_COLORS, DEFAULT_DIFFICULTY, SCENES, KOI_POND, KANA } from '../global/Constants';
 import { useDebugValue } from 'react';
-import { poolForLevel, levelConfig, MAX_LEVEL, itemByRomaji, type Level } from '../../data/content';
+import { poolForLevel, levelConfig, MAX_LEVEL, itemByRomaji, wordsForLevel, KANA_ITEMS, VOCAB_ITEMS, type Level, type VocabItem } from '../../data/content';
 import { matchesSpeech, type KanaItem } from '../../domain/kana-matching';
+import { startWord, tapKana, slotsFor, type SpellState } from '../../domain/word-spelling';
+import { WORD_CARD_PREFIX } from '../../domain/progress';
 import { progressStore } from '../../state/progressStore';
 
 import { TeacherClient } from '../client/TeacherClient'
@@ -52,7 +54,12 @@ export class UnderWaterScene extends Scene {
   private speechRecognitionOn: string = 'off';
   // Komorebi koi pond
   private currentLevel: number = KOI_POND.START_LEVEL;
-  private mode: 'relax' | 'time' | 'free' = 'relax';
+  private mode: 'relax' | 'time' | 'free' | 'words' = 'relax';
+  // Modo palabras: current word + spelling chain + pools
+  private currentWord?: VocabItem;
+  private spell?: SpellState;
+  private wordPool: VocabItem[] = [];
+  private wordPondPool: KanaItem[] = [];
   private questionTimer?: Phaser.Time.TimerEvent;
   private timeBar?: Phaser.GameObjects.Rectangle;
   private levelTimeouts: number = 0;
@@ -74,7 +81,7 @@ export class UnderWaterScene extends Scene {
     super('UnderWaterScene');
   }
 
-  init(data: { playerName: string, isTeacher: boolean, mode: string, difficulty: string, teacherName: string, speechRecognitionOn: string, pondMode?: 'relax' | 'time' | 'free' }) {
+  init(data: { playerName: string, isTeacher: boolean, mode: string, difficulty: string, teacherName: string, speechRecognitionOn: string, pondMode?: 'relax' | 'time' | 'free' | 'words' }) {
     this.playerName = data.playerName;
     this.playerType = data.isTeacher ? ROLES.TEACHER : ROLES.STUDENT;
     this.gameMode = data.mode;
@@ -450,7 +457,7 @@ export class UnderWaterScene extends Scene {
     // Voice toggle from the side panel (ADR-0010: optional, click always works). Each pond
     // entry starts click-only; the panel mirrors that via `voice-state`.
     const onVoiceToggle = (on: boolean) => {
-      this.voiceOn = on && this.mode !== 'free';
+      this.voiceOn = on && (this.mode === 'relax' || this.mode === 'time');
       if (!this.voiceOn) {
         this.stopVoiceListening();
       } else if (this.currentAnswer) {
@@ -469,8 +476,148 @@ export class UnderWaterScene extends Scene {
       this.startFreeMode();
       return;
     }
+    if (this.mode === 'words') {
+      this.startWordsMode();
+      return;
+    }
     this.registerPondInput();
     this.beginLevel(false);
+  }
+
+  // --- Modo palabras (deletreo encadenado, catálogo de mini-juegos) ---------------------------
+
+  // Tap kana in order to spell a word (す→し→すし). Completing a word earns its vocabulary card.
+  // Words come from the level's cumulative pool; thin pools (early levels) fall back to the full
+  // curated list, labelling the pond with all 46 kana so everything stays spellable.
+  private startWordsMode(): void {
+    const forLevel = wordsForLevel(this.currentLevel);
+    const useLevelPool = forLevel.length >= 3;
+    this.wordPool = useLevelPool ? forLevel : VOCAB_ITEMS;
+    this.wordPondPool = useLevelPool ? poolForLevel(this.currentLevel) : KANA_ITEMS;
+
+    this.objectManager.reassignKana(this.fishGroup, this.wordPondPool);
+    this.updateWaitingMessage('Modo palabras — toca los kana en orden', 'student');
+    EventBus.emit('row-progress', null);
+    this.registerWordInput();
+    this.nextWord();
+  }
+
+  private nextWord(): void {
+    if (this.gameOver) return;
+    const unowned = this.wordPool.filter((w) => !progressStore.isOwned(WORD_CARD_PREFIX + w.romaji));
+    const word = Phaser.Math.RND.pick(unowned.length > 0 ? unowned : this.wordPool);
+    this.currentWord = word;
+    this.spell = startWord(word.kana);
+
+    // Every kana of the word must swim in the pond; relabel with a guarantee when one is missing.
+    const missing = word.kanaRomaji.filter((r) => !this.objectManager.hasKana(r));
+    if (missing.length > 0) {
+      this.objectManager.reassignKana(this.fishGroup, this.wordPondPool, word.kanaRomaji);
+    }
+    this.presentWord();
+  }
+
+  private presentWord(): void {
+    const word = this.currentWord;
+    if (!word || !this.spell) return;
+    this.input.enabled = true;
+    this.renderWordSlots();
+    if (this.cache.audio.exists(word.audio)) {
+      this.sound.play(word.audio);
+    }
+    this.emitWordTarget();
+  }
+
+  private renderWordSlots(): void {
+    if (!this.spell) return;
+    this.questionText.setText(slotsFor(this.spell).join('  '));
+    this.textHelper.updateTextColor(this.questionText, 'gold');
+    this.questionText.setVisible(true);
+  }
+
+  private emitWordTarget(): void {
+    const word = this.currentWord;
+    if (!word || !this.spell) return;
+    EventBus.emit('word-target', {
+      reading: word.reading,
+      romaji: word.romaji,
+      meaning: word.meaning,
+      audio: word.audio,
+      slots: slotsFor(this.spell),
+    });
+  }
+
+  private registerWordInput(): void {
+    this.input.enabled = true;
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this.canClick || this.gameOver || !this.currentWord || !this.spell) return;
+      this.canClick = false;
+
+      const clicked = this.fishGroup.getChildren().find((obj) =>
+        (obj as Phaser.GameObjects.Sprite).getBounds().contains(pointer.x, pointer.y)) as Phaser.GameObjects.Sprite | undefined;
+      if (clicked) {
+        const item = itemByRomaji(clicked.name);
+        if (item) this.handleWordTap(clicked, item);
+      }
+      this.time.delayedCall(this.clickCooldownTime, () => { this.canClick = true; });
+    });
+  }
+
+  private handleWordTap(sprite: Phaser.GameObjects.Sprite, item: KanaItem): void {
+    if (!this.currentWord || !this.spell) return;
+    const { state, result } = tapKana(this.spell, item.prompt);
+    this.spell = state;
+
+    if (result === 'break') {
+      // Chain broken — gentle feedback, the word restarts (never punishes, ADR-0006).
+      this.sound.play(SOUNDS.INCORRECT_SOUND);
+      this.cameras.main.shake(120, 0.002);
+    } else {
+      if (this.cache.audio.exists(item.audio)) {
+        this.sound.play(item.audio);
+      }
+      this.tweens.add({ targets: sprite, scale: 1.4, duration: 140, yoyo: true, ease: 'Power1' });
+    }
+
+    this.renderWordSlots();
+    this.emitWordTarget();
+    if (result === 'complete') this.onWordComplete();
+  }
+
+  private onWordComplete(): void {
+    const word = this.currentWord;
+    if (!word) return;
+    this.currentWord = undefined; // ignore taps until the next word arrives
+
+    const awarded = progressStore.awardWordCard(word.romaji);
+    this.inputSystem.growPlants(); // each completed word charges the crystal
+    if (awarded) this.popWordCard(word);
+    this.updateWaitingMessage(`${word.reading} — ${word.meaning}`, 'student');
+    this.time.delayedCall(450, () => {
+      if (this.cache.audio.exists(word.audio)) this.sound.play(word.audio);
+    });
+    this.time.delayedCall(
+      awarded ? KOI_POND.NEXT_QUESTION_DELAY_CARD_MS : KOI_POND.NEXT_QUESTION_DELAY_MS,
+      () => this.nextWord(),
+    );
+  }
+
+  private popWordCard(v: VocabItem): void {
+    const card = this.add.container(this.cameras.main.centerX, 200).setDepth(400);
+    const bg = this.add.rectangle(0, 0, 210, 150, 0x123b52).setStrokeStyle(3, 0xffd479);
+    const reading = this.add.text(0, -30, v.reading, {
+      fontFamily: KANA.FONT_FAMILY, fontSize: '42px', color: '#ffffff', stroke: KANA.STROKE, strokeThickness: 4,
+    }).setOrigin(0.5);
+    const meaning = this.add.text(0, 24, v.meaning, {
+      fontFamily: 'Arial', fontSize: '14px', color: '#9fe7ec', align: 'center', wordWrap: { width: 190 },
+    }).setOrigin(0.5);
+    const tag = this.add.text(0, 56, '¡Carta de palabra!', {
+      fontFamily: 'Arial', fontSize: '14px', color: '#ffd479',
+    }).setOrigin(0.5);
+    card.add([bg, reading, meaning, tag]);
+    card.setScale(0.5).setAlpha(0);
+    this.tweens.add({ targets: card, scale: 1, alpha: 1, duration: 300, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: card, alpha: 0, y: 150, delay: 1300, duration: 500, onComplete: () => card.destroy() });
   }
 
   // Free exploration: every koi is tappable; tapping plays its pronunciation and shows the

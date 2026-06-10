@@ -291,6 +291,46 @@ body {
     font-size: 28px;
 }
 
+/* Word cards (modo palabras) */
+.codex__subhead {
+    margin: 22px 0 0;
+    font-size: 18px;
+    color: #ffd479;
+}
+
+.codex__grid--words {
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+}
+
+.codex-card--word .codex-card__word {
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.codex-card--word .codex-card__back small {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    color: #9fe7ec;
+}
+
+/* Word-mode panel */
+.kana-panel__slots {
+    font-family: 'Noto Sans JP', Arial, sans-serif;
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: #ffd479;
+    line-height: 1.3;
+}
+
+.kana-panel__meaning {
+    margin: 10px 0 0;
+    font-size: 17px;
+    color: #eaf6f8;
+}
+
 .spritePosition {
     margin: 10px 0 0 10px;
     font-size: 0.8em;

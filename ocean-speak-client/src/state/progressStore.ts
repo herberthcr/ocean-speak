@@ -15,6 +15,7 @@ import {
     reviewCandidates,
     setLevelStars,
     starsFor,
+    awardWordCard,
     type ProgressState,
 } from '../domain/progress';
 
@@ -108,6 +109,14 @@ class ProgressStore {
     /** Mastered kana from earlier rows, eligible for interleaved review. */
     reviewCandidates(poolRomaji: string[], rowRomaji: string[], threshold: number): string[] {
         return reviewCandidates(this.state, poolRomaji, rowRomaji, threshold);
+    }
+
+    /** Award a vocabulary card for a completed word; true if newly earned. */
+    awardWordCard(wordRomaji: string): boolean {
+        const { state, awarded } = awardWordCard(this.state, wordRomaji);
+        this.state = state;
+        this.persist();
+        return awarded;
     }
 
     /** Record Time-mode stars for a level (best result kept). */

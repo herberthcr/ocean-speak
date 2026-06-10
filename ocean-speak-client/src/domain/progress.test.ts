@@ -13,6 +13,8 @@ import {
     reviewCandidates,
     setLevelStars,
     starsFor,
+    awardWordCard,
+    splitCollection,
 } from './progress';
 
 describe('recordCorrect', () => {
@@ -76,6 +78,22 @@ describe('resetMastery', () => {
         const reset = resetMastery(s, ['a']);
         expect(masteryOf(reset, 'a')).toBe(0);
         expect(masteryOf(reset, 'ka')).toBe(1);
+    });
+});
+
+describe('awardWordCard / splitCollection', () => {
+    it('awards a word card once (idempotent) without touching kana cards', () => {
+        let s = emptyProgress();
+        for (let i = 0; i < 4; i++) ({ state: s } = recordCorrect(s, 'su', 4));
+        const first = awardWordCard(s, 'sushi');
+        expect(first.awarded).toBe(true);
+        const second = awardWordCard(first.state, 'sushi');
+        expect(second.awarded).toBe(false);
+        expect(second.state.collection.filter((c) => c === 'word:sushi')).toHaveLength(1);
+
+        const { kana, words } = splitCollection(second.state.collection);
+        expect(kana).toEqual(['su']);
+        expect(words).toEqual(['sushi']);
     });
 });
 

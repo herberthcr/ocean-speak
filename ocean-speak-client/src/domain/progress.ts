@@ -78,6 +78,30 @@ export function resetMastery(s: ProgressState, romaji: string[]): ProgressState 
     return { ...s, mastery };
 }
 
+/** Card-key prefix for vocabulary cards; kana cards use the bare romaji. */
+export const WORD_CARD_PREFIX = 'word:';
+
+/** Award the collectible card for a completed word (idempotent). */
+export function awardWordCard(
+    s: ProgressState,
+    wordRomaji: string,
+): { state: ProgressState; awarded: boolean } {
+    const key = WORD_CARD_PREFIX + wordRomaji;
+    if (s.collection.includes(key)) return { state: s, awarded: false };
+    return { state: { ...s, collection: [...s.collection, key] }, awarded: true };
+}
+
+/** Split a collection into kana-card romaji and word-card romaji. */
+export function splitCollection(collection: string[]): { kana: string[]; words: string[] } {
+    const kana: string[] = [];
+    const words: string[] = [];
+    for (const c of collection) {
+        if (c.startsWith(WORD_CARD_PREFIX)) words.push(c.slice(WORD_CARD_PREFIX.length));
+        else kana.push(c);
+    }
+    return { kana, words };
+}
+
 /** Record stars earned for a level (Time mode); keeps the best result. */
 export function setLevelStars(s: ProgressState, level: number, stars: number): ProgressState {
     const key = String(level);

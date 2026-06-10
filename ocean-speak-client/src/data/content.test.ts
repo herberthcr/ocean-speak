@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { KANA_ITEMS, LEVELS, MAX_LEVEL, poolForLevel, itemByRomaji } from './content';
+import { KANA_ITEMS, LEVELS, MAX_LEVEL, poolForLevel, itemByRomaji, VOCAB_ITEMS, wordsForLevel, vocabByRomaji } from './content';
 
 describe('content data', () => {
     it('has the 46 base hiragana', () => {
@@ -32,5 +32,36 @@ describe('content data', () => {
     it('resolves items by romaji', () => {
         expect(itemByRomaji('shi')?.prompt).toBe('し');
         expect(itemByRomaji('zzz')).toBeUndefined();
+    });
+});
+
+describe('vocab (modo palabras)', () => {
+    it('every word is 2-4 morae, fully decomposable into the 46 base kana, with word_ audio', () => {
+        const prompts = new Set(KANA_ITEMS.map((i) => i.prompt));
+        expect(VOCAB_ITEMS.length).toBeGreaterThan(50);
+        for (const v of VOCAB_ITEMS) {
+            expect(v.kana.length).toBeGreaterThanOrEqual(2);
+            expect(v.kana.length).toBeLessThanOrEqual(4);
+            for (const g of v.kana) expect(prompts.has(g)).toBe(true);
+            for (const r of v.kanaRomaji) expect(r).not.toBe('');
+            expect(v.audio).toMatch(/^word_/);
+        }
+    });
+
+    it('wordsForLevel only offers words spellable with the cumulative pool', () => {
+        const lvl1 = wordsForLevel(1); // vowels only
+        for (const v of lvl1) {
+            expect(v.kana.every((g) => 'あいうえお'.includes(g))).toBe(true);
+        }
+        // the full pool can spell every curated word
+        expect(wordsForLevel(MAX_LEVEL).length).toBe(VOCAB_ITEMS.length);
+        // pools only grow
+        expect(wordsForLevel(3).length).toBeGreaterThanOrEqual(lvl1.length);
+    });
+
+    it('resolves vocab by romaji (sushi)', () => {
+        const sushi = vocabByRomaji('sushi');
+        expect(sushi?.reading).toBe('すし');
+        expect(sushi?.kanaRomaji).toEqual(['su', 'shi']);
     });
 });

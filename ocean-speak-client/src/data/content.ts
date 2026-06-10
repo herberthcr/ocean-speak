@@ -32,6 +32,46 @@ export const LEVELS: Level[] = raw.levels.map((l) => ({
 export const MAX_LEVEL = LEVELS.length;
 
 const BY_ROMAJI = new Map<string, KanaItem>(KANA_ITEMS.map((i) => [i.romaji, i]));
+const BY_PROMPT = new Map<string, KanaItem>(KANA_ITEMS.map((i) => [i.prompt, i]));
+
+/** A spellable word (modo palabras): curated so its reading uses only the 46 base kana. */
+export interface VocabItem {
+    word: string;
+    reading: string;
+    romaji: string;
+    meaning: string;
+    /** Audio asset key (word_*). */
+    audio: string;
+    /** Reading decomposed into glyphs, e.g. ['す','し']. */
+    kana: string[];
+    /** Same glyphs as kana romaji keys (pond sprites are named by romaji). */
+    kanaRomaji: string[];
+}
+
+export const VOCAB_ITEMS: VocabItem[] = raw.vocab.map((v) => {
+    const kana = v.reading.split('');
+    return {
+        word: v.word,
+        reading: v.reading,
+        romaji: v.romaji,
+        meaning: v.es,
+        audio: v.audio,
+        kana,
+        kanaRomaji: kana.map((g) => BY_PROMPT.get(g)?.romaji ?? ''),
+    };
+});
+
+const VOCAB_BY_ROMAJI = new Map<string, VocabItem>(VOCAB_ITEMS.map((v) => [v.romaji, v]));
+
+export function vocabByRomaji(romaji: string): VocabItem | undefined {
+    return VOCAB_BY_ROMAJI.get(romaji);
+}
+
+/** Words fully spellable with the cumulative kana pool at `level`. */
+export function wordsForLevel(level: number): VocabItem[] {
+    const pool = new Set(poolForLevel(level).map((i) => i.prompt));
+    return VOCAB_ITEMS.filter((v) => v.kana.every((g) => pool.has(g)));
+}
 
 export function itemByRomaji(romaji: string): KanaItem | undefined {
     return BY_ROMAJI.get(romaji);
