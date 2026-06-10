@@ -10,7 +10,9 @@ type PondMode = 'relax' | 'time' | 'free' | 'words';
 
 interface ModeOption {
     mode: PondMode;
-    emoji: string;
+    /** Kanji icon (rendered in Noto on a tinted plate — crisp on every OS, unlike emoji). */
+    kanji: string;
+    color: number;
     title: string;
     desc: string;
 }
@@ -69,11 +71,12 @@ export class ModeSelectScene extends Scene {
             fontFamily: 'Arial', fontSize: '18px', color: '#eaf6f8',
         }).setOrigin(0.5);
 
+        // Icons are kanji on tinted plates: 禅 zen · 時 time · 語 word · 魚 fish.
         const options: ModeOption[] = [
-            { mode: 'relax', emoji: '🧘', title: t('modeRelax'), desc: t('modeRelaxDesc') },
-            { mode: 'time', emoji: '⏱️', title: t('modeTime'), desc: t('modeTimeDesc') },
-            { mode: 'words', emoji: '🍣', title: t('modeWords'), desc: t('modeWordsDesc') },
-            { mode: 'free', emoji: '🐟', title: t('modeFree'), desc: t('modeFreeDesc') },
+            { mode: 'relax', kanji: '禅', color: 0x7ee8f0, title: t('modeRelax'), desc: t('modeRelaxDesc') },
+            { mode: 'time', kanji: '時', color: 0xffd479, title: t('modeTime'), desc: t('modeTimeDesc') },
+            { mode: 'words', kanji: '語', color: 0xff8e7a, title: t('modeWords'), desc: t('modeWordsDesc') },
+            { mode: 'free', kanji: '魚', color: 0x9ecbff, title: t('modeFree'), desc: t('modeFreeDesc') },
         ];
         options.forEach((o, i) => this.makeButton(cx, 298 + i * 112, o));
 
@@ -112,14 +115,18 @@ export class ModeSelectScene extends Scene {
     private makeButton(x: number, y: number, o: ModeOption): void {
         const c = this.add.container(x, y);
         const bg = this.add.rectangle(0, 0, 470, 96, 0x0d2a3f, 0.92).setStrokeStyle(3, 0x39c0c8);
-        const emoji = this.add.text(-195, 0, o.emoji, { fontSize: '42px' }).setOrigin(0.5);
+        const plate = this.add.circle(-195, 0, 28, o.color, 0.16).setStrokeStyle(2, o.color, 0.9);
+        const icon = this.add.text(-195, 0, o.kanji, {
+            fontFamily: KANA.FONT_FAMILY, fontSize: '32px', fontStyle: 'bold',
+            color: '#ffffff', stroke: KANA.STROKE, strokeThickness: 3,
+        }).setOrigin(0.5);
         const title = this.add.text(-148, -17, o.title, {
             fontFamily: 'Arial', fontSize: '30px', fontStyle: 'bold', color: '#ffd479',
         }).setOrigin(0, 0.5);
         const desc = this.add.text(-148, 21, o.desc, {
             fontFamily: 'Arial', fontSize: '17px', color: '#9fe7ec',
         }).setOrigin(0, 0.5);
-        c.add([bg, emoji, title, desc]);
+        c.add([bg, plate, icon, title, desc]);
 
         if (o.mode === 'time') {
             const stars = progressStore.starsFor(progressStore.currentLevel);

@@ -1,5 +1,4 @@
 import { Scene } from 'phaser';
-import { EventBus } from '../EventBus';
 import { BACKGROUNDS, SHADERS, ASSETS, IMAGES, SCENES, FONTS, SOUNDS } from '../global/Constants';
 import { KANA_ITEMS, VOCAB_ITEMS } from '../../data/content';
 
@@ -73,9 +72,12 @@ export class PreloadScene extends Scene {
         const startMenu = () => this.scene.start(SCENES.MODE_SELECT);
 
         if (document.fonts?.load) {
+            // The sample text forces the CJK subsets we draw at boot (menu kanji icons + title)
+            // to be fetched before any canvas text renders — canvas won't repaint on late fonts.
+            const sample = '禅時語魚こもれび';
             Promise.all([
-                document.fonts.load('400 44px "Noto Sans JP"'),
-                document.fonts.load('700 44px "Noto Sans JP"'),
+                document.fonts.load('400 44px "Noto Sans JP"', sample),
+                document.fonts.load('700 44px "Noto Sans JP"', sample),
             ]).then(() => startMenu()).catch(() => startMenu());
         } else {
             startMenu();
