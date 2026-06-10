@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { SCENES, KANA } from '../global/Constants';
 import type { KanaItem } from '../../domain/kana-matching';
+import { t } from '../../i18n/strings';
 
 /**
  * Teach-first overlay (ADR-0006): shown before a kana is ever evaluated. Presents the glyph,
@@ -22,7 +23,7 @@ export class TeachScene extends Scene {
             .setOrigin(0);
         this.add.rectangle(cx, cy, 540, 440, 0x0d2a3f, 0.97).setStrokeStyle(4, 0x39c0c8);
 
-        this.add.text(cx, cy - 175, 'Nuevo kana', {
+        this.add.text(cx, cy - 175, t('teachNewKana'), {
             fontFamily: KANA.FONT_FAMILY, fontSize: '24px', color: '#9fe7ec',
         }).setOrigin(0.5);
 
@@ -45,11 +46,11 @@ export class TeachScene extends Scene {
         speaker.on('pointerdown', play);
         play(); // best-effort autoplay; first tap on the card unlocks audio if blocked
 
-        this.add.text(cx, cy + 120, '(mnemónico próximamente)', {
+        this.add.text(cx, cy + 120, t('teachMnemonic'), {
             fontFamily: 'Arial', fontSize: '16px', color: '#6f97a8',
         }).setOrigin(0.5);
 
-        const cont = this.add.text(cx, cy + 180, 'Continuar  ▶', {
+        const cont = this.add.text(cx, cy + 180, t('teachContinue'), {
             fontFamily: 'Arial', fontSize: '28px', color: '#ffffff',
             backgroundColor: '#1f6f78', padding: { x: 18, y: 8 },
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });

@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { SCENES, CARD, KANA, SOUNDS, IMAGES } from '../global/Constants';
 import { itemByRomaji } from '../../data/content';
+import { t } from '../../i18n/strings';
 
 /**
  * Level-complete reward (ADR-0011 Phase 1 / ADR-0018): fanfare + the row's cards revealed one by
@@ -19,10 +20,10 @@ export class RewardScene extends Scene {
         const root = this.add.container(0, 0).setAlpha(0);
         root.add(this.add.rectangle(0, 0, width, height, 0x05131f, 0.88).setOrigin(0));
 
-        root.add(this.add.text(cx, 80, '¡Nivel completo!', {
+        root.add(this.add.text(cx, 80, t('levelComplete'), {
             fontFamily: 'Arial', fontSize: '46px', fontStyle: 'bold', color: '#ffd479',
         }).setOrigin(0.5));
-        root.add(this.add.text(cx, 132, `Nivel ${data.level} · ${data.label}  —  ${data.cards.length} cartas`, {
+        root.add(this.add.text(cx, 132, `${t('level')} ${data.level} · ${data.label}  —  ${data.cards.length} ${t('cards').toLowerCase()}`, {
             fontFamily: 'Arial', fontSize: '22px', color: '#9fe7ec',
         }).setOrigin(0.5));
 
@@ -34,7 +35,7 @@ export class RewardScene extends Scene {
             this.tweens.add({ targets: starsText, scale: 1, delay: 500, duration: 400, ease: 'Back.easeOut' });
         }
 
-        root.add(this.add.text(cx, data.stars ? 202 : 178, 'Toca una carta para escucharla', {
+        root.add(this.add.text(cx, data.stars ? 202 : 178, t('tapCardToHear'), {
             fontFamily: 'Arial', fontSize: '17px', color: '#eaf6f8',
         }).setOrigin(0.5));
 
@@ -70,11 +71,11 @@ export class RewardScene extends Scene {
         }).explode(90);
 
         // Repetir (left) · Siguiente/Terminar (right).
-        const repeatBtn = this.add.text(cx - 16, height - 78, '↺ Repetir nivel', {
+        const repeatBtn = this.add.text(cx - 16, height - 78, t('repeatLevel'), {
             fontFamily: 'Arial', fontSize: '24px', color: '#eaf6f8',
             backgroundColor: '#14485c', padding: { x: 18, y: 10 },
         }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
-        const nextBtn = this.add.text(cx + 16, height - 78, data.isLast ? 'Terminar ✔' : 'Siguiente nivel ▶', {
+        const nextBtn = this.add.text(cx + 16, height - 78, data.isLast ? t('finish') : t('nextLevel'), {
             fontFamily: 'Arial', fontSize: '24px', color: '#052233',
             backgroundColor: '#39c0c8', padding: { x: 18, y: 10 },
         }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });

@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { SCENES, CARD, KANA } from '../global/Constants';
 import type { KanaItem } from '../../domain/kana-matching';
+import { t } from '../../i18n/strings';
 
 /**
  * Level intro — the "lesson" (ADR-0006 teach-first, row-at-once per ADR-0018). Presents the
@@ -20,10 +21,10 @@ export class LessonScene extends Scene {
         const root = this.add.container(0, 0).setAlpha(0);
         root.add(this.add.rectangle(0, 0, width, height, 0x05131f, 0.86).setOrigin(0));
 
-        root.add(this.add.text(cx, 96, `Nivel ${data.level} · ${data.label}`, {
+        root.add(this.add.text(cx, 96, `${t('level')} ${data.level} · ${data.label}`, {
             fontFamily: 'Arial', fontSize: '42px', fontStyle: 'bold', color: '#ffd479',
         }).setOrigin(0.5));
-        root.add(this.add.text(cx, 150, 'Kana nuevos — toca una carta para escucharla', {
+        root.add(this.add.text(cx, 150, t('lessonNewKana'), {
             fontFamily: 'Arial', fontSize: '20px', color: '#9fe7ec',
         }).setOrigin(0.5));
 
@@ -49,7 +50,7 @@ export class LessonScene extends Scene {
             playSequence();
         }
 
-        const btn = this.add.text(cx, height - 84, '¡A pescar!  🎣', {
+        const btn = this.add.text(cx, height - 84, t('lessonGo'), {
             fontFamily: 'Arial', fontSize: '30px', color: '#052233',
             backgroundColor: '#39c0c8', padding: { x: 22, y: 10 },
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });

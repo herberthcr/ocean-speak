@@ -2,8 +2,9 @@ import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
 import { SCENES, BACKGROUNDS, SHADERS, IMAGES, SOUNDS, KANA } from '../global/Constants';
 import { progressStore } from '../../state/progressStore';
-import { levelConfig, KANA_ITEMS } from '../../data/content';
+import { levelConfig, levelLabel, KANA_ITEMS } from '../../data/content';
 import { splitCollection } from '../../domain/progress';
+import { t, currentLang, setLang, type Lang } from '../../i18n/strings';
 
 type PondMode = 'relax' | 'time' | 'free' | 'words';
 
@@ -18,6 +19,7 @@ interface ModeOption {
  * Mode select — the simplified Komorebi replacement for Ocean Speak's MenuScene (which handled
  * names, teacher/online and difficulty we don't use). Reuses its look: blue background, tunnel
  * shader, bubbles and hover/click sounds. Routes into the koi pond with the chosen pondMode.
+ * Hosts the ES/EN language toggle; scenes read the language when they are created.
  */
 export class ModeSelectScene extends Scene {
     constructor() {
@@ -26,6 +28,7 @@ export class ModeSelectScene extends Scene {
 
     create(): void {
         const cx = this.scale.width / 2;
+        const lang = currentLang();
         this.cameras.main.fadeIn(600, 0, 20, 35);
 
         this.add.image(0, 0, BACKGROUNDS.BLUE_BACKGROUND).setOrigin(0);
@@ -43,32 +46,57 @@ export class ModeSelectScene extends Scene {
             fontFamily: KANA.FONT_FAMILY, fontSize: '64px', fontStyle: 'bold',
             color: '#ffffff', stroke: KANA.STROKE, strokeThickness: 8,
         }).setOrigin(0.5);
-        this.add.text(cx, 168, 'Cabaña del Escriba — Estanque de koi', {
+        this.add.text(cx, 168, t('pondTitle'), {
             fontFamily: 'Arial', fontSize: '24px', color: '#9fe7ec',
         }).setOrigin(0.5);
 
         const level = progressStore.currentLevel;
         const cfg = levelConfig(level);
         const { kana, words } = splitCollection(progressStore.collection());
-        const cardsLine = `Nivel ${cfg.level} · ${cfg.label}    ·    Cartas: ${kana.length}/${KANA_ITEMS.length}`
-            + (words.length > 0 ? `    ·    Palabras: ${words.length}` : '');
+        const cardsLine = `${t('level')} ${cfg.level} · ${levelLabel(cfg, lang)}    ·    ${t('cards')}: ${kana.length}/${KANA_ITEMS.length}`
+            + (words.length > 0 ? `    ·    ${t('words')}: ${words.length}` : '');
         this.add.text(cx, 215, cardsLine, {
             fontFamily: 'Arial', fontSize: '18px', color: '#eaf6f8',
         }).setOrigin(0.5);
 
         const options: ModeOption[] = [
-            { mode: 'relax', emoji: '🧘', title: 'Relax', desc: 'Aprende a tu ritmo, sin reloj' },
-            { mode: 'time', emoji: '⏱️', title: 'Tiempo', desc: 'Contra reloj — gana estrellas' },
-            { mode: 'words', emoji: '🍣', title: 'Palabras', desc: 'Forma palabras tocando los koi en orden' },
-            { mode: 'free', emoji: '🐟', title: 'Libre', desc: 'Toca cualquier koi y escúchalo' },
+            { mode: 'relax', emoji: '🧘', title: t('modeRelax'), desc: t('modeRelaxDesc') },
+            { mode: 'time', emoji: '⏱️', title: t('modeTime'), desc: t('modeTimeDesc') },
+            { mode: 'words', emoji: '🍣', title: t('modeWords'), desc: t('modeWordsDesc') },
+            { mode: 'free', emoji: '🐟', title: t('modeFree'), desc: t('modeFreeDesc') },
         ];
         options.forEach((o, i) => this.makeButton(cx, 298 + i * 112, o));
+
+        this.makeLangToggle(lang);
 
         // Clear the side panel while in the menu.
         EventBus.emit('kana-target', null);
         EventBus.emit('word-target', null);
         EventBus.emit('row-progress', null);
         EventBus.emit('current-scene-ready', this);
+    }
+
+    // ES | EN switch (top-right). Persists and re-renders the menu in place.
+    private makeLangToggle(lang: Lang): void {
+        const make = (x: number, code: Lang, label: string) => {
+            const txt = this.add.text(x, 36, label, {
+                fontFamily: 'Arial', fontSize: '20px', fontStyle: lang === code ? 'bold' : 'normal',
+                color: lang === code ? '#ffd479' : '#9fe7ec',
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            txt.on('pointerdown', () => {
+                if (currentLang() !== code) {
+                    this.sound.play(SOUNDS.MOUSE_CLICK_SOUND);
+                    setLang(code);
+                    this.scene.restart();
+                }
+            });
+            return txt;
+        };
+        make(this.scale.width - 96, 'es', 'ES');
+        this.add.text(this.scale.width - 72, 36, '|', {
+            fontFamily: 'Arial', fontSize: '18px', color: '#5a7d8c',
+        }).setOrigin(0.5);
+        make(this.scale.width - 48, 'en', 'EN');
     }
 
     private makeButton(x: number, y: number, o: ModeOption): void {

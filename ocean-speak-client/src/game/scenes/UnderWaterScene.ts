@@ -10,7 +10,8 @@ import { ECSWorld } from '../ecs/ECSWorld';
 import { TextHelper } from '../global/TextHelper'
 import { SCREEN, QUESTIONS, BACKGROUNDS, SHADERS, PARALLAX, IMAGES, FONTS, FISH_ANIMATIONS, PLANTS_ANIMATIONS, SOUNDS, DIFFICULTY, ROLES, AQUATIC_CHARACTERS, COLOR_THEMES, PLAYER_COLORS, DEFAULT_DIFFICULTY, SCENES, KOI_POND, KANA } from '../global/Constants';
 import { useDebugValue } from 'react';
-import { poolForLevel, levelConfig, MAX_LEVEL, itemByRomaji, wordsForLevel, KANA_ITEMS, VOCAB_ITEMS, type Level, type VocabItem } from '../../data/content';
+import { poolForLevel, levelConfig, levelLabel, meaningOf, MAX_LEVEL, itemByRomaji, wordsForLevel, KANA_ITEMS, VOCAB_ITEMS, type Level, type VocabItem } from '../../data/content';
+import { t, currentLang } from '../../i18n/strings';
 import { matchesSpeech, type KanaItem } from '../../domain/kana-matching';
 import { startWord, tapKana, slotsFor, type SpellState } from '../../domain/word-spelling';
 import { WORD_CARD_PREFIX } from '../../domain/progress';
@@ -451,7 +452,7 @@ export class UnderWaterScene extends Scene {
     // Relax/Time flow (ADR-0018): LESSON (row intro) → PLAY (×N per kana) → REWARD (cards).
     // Free mode: no questions — tap any koi to hear it.
     this.currentLevel = progressStore.currentLevel;
-    this.updateTurnText('Cabaña del Escriba');
+    this.updateTurnText(t('pondTitle'));
     this.textHelper.updateTextColor(this.turnText, 'yellow');
     this.interactionText.setVisible(false); // legacy HUD; progress lives in the side panel
 
@@ -497,7 +498,7 @@ export class UnderWaterScene extends Scene {
     this.wordPondPool = useLevelPool ? poolForLevel(this.currentLevel) : KANA_ITEMS;
 
     this.objectManager.reassignKana(this.fishGroup, this.wordPondPool);
-    this.updateWaitingMessage('Modo palabras — toca los kana en orden', 'student');
+    this.updateWaitingMessage(t('wordsModeMsg'), 'student');
     EventBus.emit('row-progress', null);
     this.registerWordInput();
     this.nextWord();
@@ -546,7 +547,7 @@ export class UnderWaterScene extends Scene {
     EventBus.emit('word-target', {
       reading: word.reading,
       romaji: word.romaji,
-      meaning: word.meaning,
+      meaning: meaningOf(word, currentLang()),
       audio: word.audio,
       slots: slotsFor(this.spell),
     });
@@ -598,7 +599,7 @@ export class UnderWaterScene extends Scene {
     const awarded = progressStore.awardWordCard(word.romaji);
     this.inputSystem.growPlants(); // each completed word charges the crystal
     if (awarded) this.popWordCard(word);
-    this.updateWaitingMessage(`${word.reading} — ${word.meaning}`, 'student');
+    this.updateWaitingMessage(`${word.reading} — ${meaningOf(word, currentLang())}`, 'student');
     // Say the whole word once the last kana clip has finished (いいえ, not い…え)…
     this.time.delayedCall(650, () => {
       if (this.cache.audio.exists(word.audio)) this.sound.play(word.audio);
@@ -616,10 +617,10 @@ export class UnderWaterScene extends Scene {
     const reading = this.add.text(0, -30, v.reading, {
       fontFamily: KANA.FONT_FAMILY, fontSize: '42px', color: '#ffffff', stroke: KANA.STROKE, strokeThickness: 4,
     }).setOrigin(0.5);
-    const meaning = this.add.text(0, 24, v.meaning, {
+    const meaning = this.add.text(0, 24, meaningOf(v, currentLang()), {
       fontFamily: 'Arial', fontSize: '14px', color: '#9fe7ec', align: 'center', wordWrap: { width: 190 },
     }).setOrigin(0.5);
-    const tag = this.add.text(0, 56, '¡Carta de palabra!', {
+    const tag = this.add.text(0, 56, t('newWordCard'), {
       fontFamily: 'Arial', fontSize: '14px', color: '#ffd479',
     }).setOrigin(0.5);
     card.add([bg, reading, meaning, tag]);
@@ -633,13 +634,13 @@ export class UnderWaterScene extends Scene {
   private startFreeMode(): void {
     this.objectManager.reassignKana(this.fishGroup, poolForLevel(this.currentLevel));
     this.announceFreeMode();
-    this.questionText.setText('Toca cualquier koi  🐟');
+    this.questionText.setText(t('tapAnyKoi'));
     this.textHelper.updateTextColor(this.questionText, 'cyan');
     this.questionText.setVisible(true);
     EventBus.emit('row-progress', null);
     EventBus.emit('kana-target', {
       prompt: '', romaji: '', audio: '',
-      level: this.currentLevel, label: 'Libre', mode: 'free', review: false,
+      level: this.currentLevel, label: t('modeFree'), mode: 'free', review: false,
     });
 
     this.input.enabled = true;
@@ -655,7 +656,7 @@ export class UnderWaterScene extends Scene {
           this.inputSystem.displayFeedback(clicked as Phaser.GameObjects.Sprite, true, false, item.romaji, item.audio);
           EventBus.emit('kana-target', {
             prompt: item.prompt, romaji: item.romaji, audio: item.audio,
-            level: this.currentLevel, label: 'Libre', mode: 'free', review: false,
+            level: this.currentLevel, label: t('modeFree'), mode: 'free', review: false,
           });
         }
       }
@@ -664,7 +665,7 @@ export class UnderWaterScene extends Scene {
   }
 
   private announceFreeMode(): void {
-    this.updateWaitingMessage('Modo libre — toca y escucha', 'student');
+    this.updateWaitingMessage(t('freeModeMsg'), 'student');
   }
 
   // Level entry ritual: optional camera fade, fresh koi labels (new row guaranteed on the pond),
@@ -700,7 +701,7 @@ export class UnderWaterScene extends Scene {
     const items = cfg.adds
       .map((r) => itemByRomaji(r))
       .filter((i): i is KanaItem => Boolean(i));
-    this.scene.launch(SCENES.LESSON, { level: cfg.level, label: cfg.label, items });
+    this.scene.launch(SCENES.LESSON, { level: cfg.level, label: levelLabel(cfg, currentLang()), items });
     this.events.once('lesson-done', () => {
       cfg.adds.forEach((r) => progressStore.markTaught(r)); // the lesson IS the teach-first beat
       this.input.enabled = true;
@@ -817,12 +818,14 @@ export class UnderWaterScene extends Scene {
       romaji: item.romaji,
       audio: item.audio,
       level: this.currentLevel,
-      label: levelConfig(this.currentLevel).label,
+      label: levelLabel(levelConfig(this.currentLevel), currentLang()),
       mode: recall ? 'recall' : 'glyph',
       review,
     });
 
-    this.questionText.setText(recall ? `¿Cuál suena  "${item.romaji}"?` : `Toca  ${item.prompt}`);
+    this.questionText.setText(recall
+      ? `${t('whichSoundsA')}${item.romaji}${t('whichSoundsB')}`
+      : `${t('tap')}  ${item.prompt}`);
     this.textHelper.updateTextColor(this.questionText, review ? 'cyan' : 'pink');
     this.questionText.setVisible(true);
     this.emitRowProgress();
@@ -964,7 +967,7 @@ export class UnderWaterScene extends Scene {
 
     this.input.enabled = false;
     this.scene.pause();
-    this.scene.launch(SCENES.REWARD, { level: cfg.level, label: cfg.label, cards: cfg.adds, isLast, stars });
+    this.scene.launch(SCENES.REWARD, { level: cfg.level, label: levelLabel(cfg, currentLang()), cards: cfg.adds, isLast, stars });
     this.events.once('reward-done', (opts?: { repeat?: boolean }) => {
       if (opts?.repeat) {
         this.repeatLevel();
@@ -978,8 +981,8 @@ export class UnderWaterScene extends Scene {
     if (isLast) {
       this.input.enabled = true;
       this.currentAnswer = '';
-      this.questionText.setText('¡Completaste el hiragana! 🎉');
-      this.updateWaitingMessage('Colección de hiragana completa', 'student');
+      this.questionText.setText(t('hiraganaDone'));
+      this.updateWaitingMessage(t('hiraganaCollectionDone'), 'student');
       return;
     }
     this.currentLevel += 1;
@@ -994,7 +997,7 @@ export class UnderWaterScene extends Scene {
     const glyph = this.add.text(0, -16, item.prompt, {
       fontFamily: KANA.FONT_FAMILY, fontSize: '60px', color: '#ffffff', stroke: KANA.STROKE, strokeThickness: 4,
     }).setOrigin(0.5);
-    const tag = this.add.text(0, 52, '¡Carta nueva!', {
+    const tag = this.add.text(0, 52, t('newCard'), {
       fontFamily: 'Arial', fontSize: '14px', color: '#ffd479',
     }).setOrigin(0.5);
     card.add([bg, glyph, tag]);
@@ -1005,7 +1008,7 @@ export class UnderWaterScene extends Scene {
 
   private announceLevel(): void {
     const cfg = levelConfig(this.currentLevel);
-    this.updateWaitingMessage(`Nivel ${cfg.level} — ${cfg.label}`, 'student');
+    this.updateWaitingMessage(`${t('level')} ${cfg.level} — ${levelLabel(cfg, currentLang())}`, 'student');
   }
 
   private clearQuestionTimer(): void {

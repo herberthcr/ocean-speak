@@ -5,6 +5,7 @@ import { progressStore } from './state/progressStore';
 import { KANA_ITEMS } from './data/content';
 import { splitCollection } from './domain/progress';
 import { Codex } from './components/Codex';
+import { t, currentLang, type Lang } from './i18n/strings';
 
 interface KanaTarget {
     prompt: string;
@@ -52,6 +53,8 @@ function App() {
     const [owned, setOwned] = useState<string[]>(progressStore.collection());
     const [codexOpen, setCodexOpen] = useState(false);
     const [voiceOn, setVoiceOn] = useState(false);
+    // Re-render the panel when the language changes (toggle lives in the Phaser menu).
+    const [, setLang] = useState<Lang>(currentLang());
 
     // ja-JP voice input is optional (ADR-0010); only offered when the browser supports it.
     const voiceSupported = typeof window !== 'undefined'
@@ -64,17 +67,20 @@ function App() {
         const onRow = (r: RowProgress | null) => setRowProgress(r);
         const onProgress = (s: { collection: string[] }) => setOwned(s.collection);
         const onVoiceState = (on: boolean) => setVoiceOn(on);
+        const onLang = (l: Lang) => setLang(l);
         EventBus.on('kana-target', onTarget);
         EventBus.on('word-target', onWord);
         EventBus.on('row-progress', onRow);
         EventBus.on('progress-changed', onProgress);
         EventBus.on('voice-state', onVoiceState);
+        EventBus.on('lang-changed', onLang);
         return () => {
             EventBus.off('kana-target', onTarget);
             EventBus.off('word-target', onWord);
             EventBus.off('row-progress', onRow);
             EventBus.off('progress-changed', onProgress);
             EventBus.off('voice-state', onVoiceState);
+            EventBus.off('lang-changed', onLang);
         };
     }, []);
 
@@ -103,44 +109,44 @@ function App() {
             <aside className="kana-panel">
                 {wordTarget ? (
                     <>
-                        <p className="kana-panel__title">🍣 Forma la palabra</p>
+                        <p className="kana-panel__title">{t('panelWordTitle')}</p>
                         <div className="kana-panel__slots">{wordTarget.slots.join(' ')}</div>
                         <p className="kana-panel__meaning">{wordTarget.meaning}</p>
-                        <button className="kana-panel__audio" onClick={playWordAudio}>🔊 Escuchar</button>
+                        <button className="kana-panel__audio" onClick={playWordAudio}>{t('listen')}</button>
                         <p className="kana-panel__romaji">{wordTarget.romaji}</p>
                     </>
                 ) : target ? (
                     target.mode === 'free' ? (
                         <>
-                            <p className="kana-panel__title">🐟 Modo libre</p>
+                            <p className="kana-panel__title">{t('panelFreeTitle')}</p>
                             <div className="kana-panel__glyph">{target.prompt || '〜'}</div>
                             {target.prompt ? (
                                 <>
-                                    <button className="kana-panel__audio" onClick={playAudio}>🔊 Escuchar</button>
+                                    <button className="kana-panel__audio" onClick={playAudio}>{t('listen')}</button>
                                     <p className="kana-panel__romaji">{target.romaji}</p>
                                 </>
                             ) : (
-                                <p className="kana-panel__level">Toca un koi para escucharlo</p>
+                                <p className="kana-panel__level">{t('panelTapKoiHint')}</p>
                             )}
                         </>
                     ) : (
                         <>
-                            {target.review && <span className="kana-panel__review">✨ Repaso</span>}
+                            {target.review && <span className="kana-panel__review">{t('review')}</span>}
                             <p className="kana-panel__title">
-                                {target.mode === 'recall' ? '¿Cuál suena así?' : 'Toca este kana'}
+                                {target.mode === 'recall' ? t('panelWhichSounds') : t('panelTapKana')}
                             </p>
                             {target.mode === 'recall' ? (
                                 <div className="kana-panel__glyph kana-panel__glyph--hidden">?</div>
                             ) : (
                                 <div className="kana-panel__glyph">{target.prompt}</div>
                             )}
-                            <button className="kana-panel__audio" onClick={playAudio}>🔊 Escuchar</button>
+                            <button className="kana-panel__audio" onClick={playAudio}>{t('listen')}</button>
                             <p className="kana-panel__romaji">{target.romaji}</p>
-                            <p className="kana-panel__level">Nivel {target.level} · {target.label}</p>
+                            <p className="kana-panel__level">{t('level')} {target.level} · {target.label}</p>
                         </>
                     )
                 ) : (
-                    <p className="kana-panel__title">Elige un modo para empezar</p>
+                    <p className="kana-panel__title">{t('panelChooseMode')}</p>
                 )}
                 {rowProgress && (
                     <div className="kana-panel__row">
@@ -168,13 +174,13 @@ function App() {
                     <button
                         className={`kana-panel__voice ${voiceOn ? 'kana-panel__voice--on' : ''}`}
                         onClick={toggleVoice}
-                        title="Di el kana en voz alta — recoge todas las coincidencias"
+                        title={t('voiceTooltip')}
                     >
-                        🎤 Voz: {voiceOn ? 'ON' : 'OFF'}
+                        {t('voice')}: {voiceOn ? 'ON' : 'OFF'}
                     </button>
                 )}
                 <button className="kana-panel__codex" onClick={() => setCodexOpen(true)}>
-                    📖 Colección · {kanaOwned.length}/{KANA_ITEMS.length}
+                    📖 {t('collection')} · {kanaOwned.length}/{KANA_ITEMS.length}
                     {wordsOwned.length > 0 && ` · ${wordsOwned.length} 🍣`}
                 </button>
             </aside>

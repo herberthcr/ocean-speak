@@ -48,6 +48,16 @@ describe('vocab (modo palabras)', () => {
         }
     });
 
+    it('is bilingual: every word has ES and EN meanings, every level an EN label', () => {
+        for (const v of VOCAB_ITEMS) {
+            expect(v.meaningEs.length).toBeGreaterThan(0);
+            expect(v.meaningEn.length).toBeGreaterThan(0);
+        }
+        for (const l of LEVELS) {
+            expect(l.labelEn.length).toBeGreaterThan(0);
+        }
+    });
+
     it('wordsForLevel only offers words spellable with the cumulative pool', () => {
         const lvl1 = wordsForLevel(1); // vowels only
         for (const v of lvl1) {

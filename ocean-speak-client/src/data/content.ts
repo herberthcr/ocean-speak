@@ -1,17 +1,25 @@
 // Typed accessors over the curated Komorebi content (komorebi_content.json).
 // Keeps "content as data" (no hardcoded kana) and is unit-testable in isolation.
 import type { KanaItem } from '../domain/kana-matching';
+import type { Lang } from '../i18n/strings';
 import raw from './komorebi_content.json';
 
 export interface Level {
     level: number;
     label: string;
+    /** English row label (label is Spanish). */
+    labelEn: string;
     /** Romaji introduced at this level (the new "row"). */
     adds: string[];
     /** Correct taps required per kana to master it (and earn its card) this level. */
     correctPerKana: number;
     /** Per-question time limit in ms for Time mode; 0 = no timer. */
     timeLimitMs: number;
+}
+
+/** Row label localized for the UI language. */
+export function levelLabel(l: Level, lang: Lang): string {
+    return lang === 'en' ? l.labelEn : l.label;
 }
 
 export const KANA_ITEMS: KanaItem[] = raw.items.map((i) => ({
@@ -24,6 +32,7 @@ export const KANA_ITEMS: KanaItem[] = raw.items.map((i) => ({
 export const LEVELS: Level[] = raw.levels.map((l) => ({
     level: l.level,
     label: l.label,
+    labelEn: l.labelEn,
     adds: l.adds,
     correctPerKana: l.correctPerKana,
     timeLimitMs: l.timeLimitMs,
@@ -39,7 +48,8 @@ export interface VocabItem {
     word: string;
     reading: string;
     romaji: string;
-    meaning: string;
+    meaningEs: string;
+    meaningEn: string;
     /** Audio asset key (word_*). */
     audio: string;
     /** Reading decomposed into glyphs, e.g. ['す','し']. */
@@ -48,13 +58,19 @@ export interface VocabItem {
     kanaRomaji: string[];
 }
 
+/** Word meaning localized for the UI language. */
+export function meaningOf(v: VocabItem, lang: Lang): string {
+    return lang === 'en' ? v.meaningEn : v.meaningEs;
+}
+
 export const VOCAB_ITEMS: VocabItem[] = raw.vocab.map((v) => {
     const kana = v.reading.split('');
     return {
         word: v.word,
         reading: v.reading,
         romaji: v.romaji,
-        meaning: v.es,
+        meaningEs: v.es,
+        meaningEn: v.en,
         audio: v.audio,
         kana,
         kanaRomaji: kana.map((g) => BY_PROMPT.get(g)?.romaji ?? ''),

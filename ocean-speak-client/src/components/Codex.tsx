@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { KANA_ITEMS, vocabByRomaji } from '../data/content';
+import { KANA_ITEMS, vocabByRomaji, meaningOf } from '../data/content';
 import { splitCollection } from '../domain/progress';
 import { progressStore } from '../state/progressStore';
+import { t, currentLang } from '../i18n/strings';
 
 interface CodexProps {
     owned: string[];
@@ -26,20 +27,20 @@ export function Codex({ owned, onClose }: CodexProps) {
         <div className="codex-overlay" onClick={onClose}>
             <div className="codex" onClick={(e) => e.stopPropagation()}>
                 <header className="codex__head">
-                    <h2>Colección · {kana.length}/{KANA_ITEMS.length}</h2>
+                    <h2>{t('collection')} · {kana.length}/{KANA_ITEMS.length}</h2>
                     <div className="codex__actions">
                         <button
                             className="codex__reset"
                             onClick={() => {
-                                if (window.confirm('¿Reiniciar todo el progreso? Se pierden cartas y niveles.')) {
+                                if (window.confirm(t('confirmReset'))) {
                                     progressStore.reset();
                                     window.location.reload();
                                 }
                             }}
                         >
-                            ↺ Reiniciar
+                            {t('reset')}
                         </button>
-                        <button className="codex__close" onClick={onClose} aria-label="Cerrar">✕</button>
+                        <button className="codex__close" onClick={onClose} aria-label="✕">✕</button>
                     </div>
                 </header>
                 <div className="codex__grid">
@@ -50,7 +51,7 @@ export function Codex({ owned, onClose }: CodexProps) {
                             <button
                                 key={item.romaji}
                                 className={`codex-card ${has ? 'codex-card--owned' : 'codex-card--locked'}`}
-                                title={has ? 'Voltear / escuchar' : 'Aún no conseguida'}
+                                title={has ? t('flipToHear') : t('notEarnedYet')}
                                 onClick={() => {
                                     if (!has) return;
                                     const next = isFlipped ? null : item.romaji;
@@ -69,7 +70,7 @@ export function Codex({ owned, onClose }: CodexProps) {
                 </div>
                 {words.length > 0 && (
                     <>
-                        <h3 className="codex__subhead">🍣 Palabras · {words.length}</h3>
+                        <h3 className="codex__subhead">🍣 {t('words')} · {words.length}</h3>
                         <div className="codex__grid codex__grid--words">
                             {words.map((romaji) => {
                                 const v = vocabByRomaji(romaji);
@@ -80,7 +81,7 @@ export function Codex({ owned, onClose }: CodexProps) {
                                     <button
                                         key={key}
                                         className="codex-card codex-card--owned codex-card--word"
-                                        title="Voltear / escuchar"
+                                        title={t('flipToHear')}
                                         onClick={() => {
                                             const next = isFlipped ? null : key;
                                             setFlipped(next);
@@ -88,7 +89,7 @@ export function Codex({ owned, onClose }: CodexProps) {
                                         }}
                                     >
                                         {isFlipped
-                                            ? <span className="codex-card__back">{v.romaji}<br /><small>{v.meaning}</small></span>
+                                            ? <span className="codex-card__back">{v.romaji}<br /><small>{meaningOf(v, currentLang())}</small></span>
                                             : <span className="codex-card__word">{v.reading}</span>}
                                     </button>
                                 );
