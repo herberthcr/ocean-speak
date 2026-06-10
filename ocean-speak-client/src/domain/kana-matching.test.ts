@@ -78,8 +78,15 @@ describe('matchesSpeech (lenient, ADR-0010)', () => {
         expect(matchesSpeech('si', shi)).toBe(true);     // lenient variant
     });
 
+    it('accepts a romaji word that starts with the mora (beginner-lenient)', () => {
+        expect(matchesSpeech('kana', ka)).toBe(true);   // ka...
+        const ke: KanaItem = { prompt: 'け', romaji: 'ke', audio: 'hira_ke', script: 'hiragana' };
+        expect(matchesSpeech('ketsu', ke)).toBe(true);  // ke...
+    });
+
     it('still rejects unrelated transcripts', () => {
         expect(matchesSpeech('いぬ', ka)).toBe(false);
         expect(matchesSpeech('', ka)).toBe(false);
+        expect(matchesSpeech(' inu', ka)).toBe(false);
     });
 });

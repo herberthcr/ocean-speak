@@ -66,6 +66,16 @@ export function matches(input: string, item: KanaItem): boolean {
  */
 export function matchesSpeech(transcript: string, item: KanaItem): boolean {
     const folded = kataToHira(transcript.trim());
-    if (folded.includes(item.prompt)) return true;
-    return matches(transcript, item);
+    if (folded.includes(item.prompt)) return true; // the kana glyph appears anywhere (カ, たか…)
+    if (matches(transcript, item)) return true;
+
+    // Beginner-lenient romaji: the recognizer often returns a word that STARTS with the mora
+    // ("ke" → "ketsu", "ka" → "kana"). Accept a prefix match against any accepted spelling.
+    const got = normalizeRomaji(transcript);
+    if (!got) return false;
+    const accepted = new Set<string>([
+        ...variantsFor(item.romaji),
+        ...(item.alias ?? []).map(normalizeRomaji),
+    ]);
+    return [...accepted].some((a) => got.startsWith(a));
 }

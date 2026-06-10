@@ -1005,7 +1005,7 @@ export class UnderWaterScene extends Scene {
     this.recognition = rec;
     rec.lang = 'ja-JP';
     rec.interimResults = true;   // live transcript for visual feedback
-    rec.continuous = true;
+    rec.continuous = false;      // one utterance → one final result → instant feedback, then re-arm
     rec.maxAlternatives = 5;
     let fatal = false;
 
@@ -1062,7 +1062,12 @@ export class UnderWaterScene extends Scene {
     rec.onend = () => {
       if (!fatal && this.voiceOn && this.recognition === rec
         && this.currentAnswer === item.romaji && !this.gameOver) {
-        try { rec.start(); } catch { /* already restarting */ }
+        // Re-arm for the next utterance after a short beat (avoids a tight loop on instant ends).
+        this.time.delayedCall(150, () => {
+          if (this.recognition === rec && this.currentAnswer === item.romaji && this.voiceOn && !this.gameOver) {
+            try { rec.start(); } catch { /* already restarting */ }
+          }
+        });
       } else if (this.recognition === rec) {
         EventBus.emit('voice-listening', false);
       }
