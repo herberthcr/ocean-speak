@@ -230,6 +230,43 @@ body {
     color: #ffd479;
 }
 
+/* Voice listening feedback: live dot + what the recognizer hears */
+.voice-feedback {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 13px;
+    color: #9fe7ec;
+}
+
+.voice-feedback__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #2c4d5e;
+}
+
+.voice-feedback__dot.is-live {
+    background: #ff6b6b;
+    animation: voice-pulse 1s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.6); }
+    50% { transform: scale(1.25); box-shadow: 0 0 0 6px rgba(255, 107, 107, 0); }
+}
+
+.voice-feedback__heard {
+    width: 100%;
+    font-family: 'Noto Sans JP', Arial, sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
 .kana-panel__codex {
     margin-top: 16px;
     padding: 10px 12px;

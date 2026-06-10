@@ -53,6 +53,9 @@ function App() {
     const [owned, setOwned] = useState<string[]>(progressStore.collection());
     const [codexOpen, setCodexOpen] = useState(false);
     const [voiceOn, setVoiceOn] = useState(false);
+    const [voiceListening, setVoiceListening] = useState(false);
+    const [voiceHeard, setVoiceHeard] = useState('');
+    const [voiceDenied, setVoiceDenied] = useState(false);
     // Re-render the panel when the language changes (toggle lives in the Phaser menu).
     const [, setLang] = useState<Lang>(currentLang());
 
@@ -66,13 +69,19 @@ function App() {
         const onWord = (w: WordTarget | null) => { setWordTarget(w); if (w) setTarget(null); };
         const onRow = (r: RowProgress | null) => setRowProgress(r);
         const onProgress = (s: { collection: string[] }) => setOwned(s.collection);
-        const onVoiceState = (on: boolean) => setVoiceOn(on);
+        const onVoiceState = (on: boolean) => { setVoiceOn(on); if (!on) { setVoiceListening(false); setVoiceHeard(''); } };
+        const onListening = (on: boolean) => setVoiceListening(on);
+        const onHeard = (txt: string) => setVoiceHeard(txt);
+        const onDenied = () => { setVoiceDenied(true); setVoiceOn(false); setVoiceListening(false); };
         const onLang = (l: Lang) => setLang(l);
         EventBus.on('kana-target', onTarget);
         EventBus.on('word-target', onWord);
         EventBus.on('row-progress', onRow);
         EventBus.on('progress-changed', onProgress);
         EventBus.on('voice-state', onVoiceState);
+        EventBus.on('voice-listening', onListening);
+        EventBus.on('voice-heard', onHeard);
+        EventBus.on('voice-denied', onDenied);
         EventBus.on('lang-changed', onLang);
         return () => {
             EventBus.off('kana-target', onTarget);
@@ -80,6 +89,9 @@ function App() {
             EventBus.off('row-progress', onRow);
             EventBus.off('progress-changed', onProgress);
             EventBus.off('voice-state', onVoiceState);
+            EventBus.off('voice-listening', onListening);
+            EventBus.off('voice-heard', onHeard);
+            EventBus.off('voice-denied', onDenied);
             EventBus.off('lang-changed', onLang);
         };
     }, []);
@@ -87,6 +99,8 @@ function App() {
     const toggleVoice = () => {
         const next = !voiceOn;
         setVoiceOn(next);
+        setVoiceDenied(false);
+        if (!next) { setVoiceListening(false); setVoiceHeard(''); }
         EventBus.emit('voice-toggle', next);
     };
 
@@ -180,13 +194,22 @@ function App() {
                     </div>
                 )}
                 {voiceSupported && target && target.mode !== 'free' && (
-                    <button
-                        className={`kana-panel__voice ${voiceOn ? 'kana-panel__voice--on' : ''}`}
-                        onClick={toggleVoice}
-                        title={t('voiceTooltip')}
-                    >
-                        {t('voice')}: {voiceOn ? 'ON' : 'OFF'}
-                    </button>
+                    <>
+                        <button
+                            className={`kana-panel__voice ${voiceOn ? 'kana-panel__voice--on' : ''}`}
+                            onClick={toggleVoice}
+                            title={t('voiceTooltip')}
+                        >
+                            {voiceDenied ? t('voiceDenied') : `${t('voice')}: ${voiceOn ? 'ON' : 'OFF'}`}
+                        </button>
+                        {voiceOn && (
+                            <div className="voice-feedback">
+                                <span className={`voice-feedback__dot ${voiceListening ? 'is-live' : ''}`} />
+                                <span className="voice-feedback__label">{t('listening')}</span>
+                                {voiceHeard && <span className="voice-feedback__heard">「{voiceHeard}」</span>}
+                            </div>
+                        )}
+                    </>
                 )}
                 <button className="kana-panel__codex" onClick={() => setCodexOpen(true)}>
                     <span key={kanaOwned.length + wordsOwned.length} className="codex-count-pop">

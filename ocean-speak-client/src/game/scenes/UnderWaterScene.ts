@@ -991,9 +991,11 @@ export class UnderWaterScene extends Scene {
 
   // --- M1b: ja-JP voice input -----------------------------------------------------------------
 
-  // Listen for one utterance; keep re-arming while this question is active. Saying the target
-  // kana collects ALL matching koi (AoE — voice is powerful, ADR-0010). Mistakes give gentle
-  // feedback and never discharge the crystal. Mic errors leave the question click-only.
+  // Listen continuously while this question is active, re-arming after each utterance. Saying the
+  // target kana collects ALL matching koi (AoE — voice is powerful, ADR-0010). Interim results
+  // are surfaced to the panel as live feedback ("escuchando" + what the recognizer heard), so the
+  // player can see it IS hearing them even on a miss. Transient errors (silence, network) just
+  // re-arm; only a denied/missing mic disables voice. Click is always the fallback.
   private startVoiceListening(item: KanaItem): void {
     const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Ctor) return;
@@ -1002,35 +1004,64 @@ export class UnderWaterScene extends Scene {
     const rec = new Ctor();
     this.recognition = rec;
     rec.lang = 'ja-JP';
-    rec.interimResults = false;
-    rec.maxAlternatives = 3;
-    let failed = false;
+    rec.interimResults = true;   // live transcript for visual feedback
+    rec.continuous = true;
+    rec.maxAlternatives = 5;
+    let fatal = false;
+
+    rec.onstart = () => {
+      if (this.recognition === rec) EventBus.emit('voice-listening', true);
+    };
 
     rec.onresult = (event: SpeechRecognitionEvent) => {
       if (this.currentAnswer !== item.romaji || this.gameOver) return;
-      const alternatives = Array.from(event.results[0] ?? []);
-      const hit = alternatives.some((alt) => matchesSpeech(alt.transcript, item));
-      if (hit) {
+      let heard = '';
+      let matched = false;
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        for (let a = 0; a < result.length; a++) {
+          if (a === 0) heard += result[a].transcript; // best guess for display
+          if (matchesSpeech(result[a].transcript, item)) matched = true;
+        }
+      }
+      EventBus.emit('voice-heard', heard.trim()); // show what the mic is picking up
+      if (matched) {
+        EventBus.emit('voice-heard', '');
         this.collectAllMatching(item);
         this.onCorrectAnswer();
-      } else {
-        this.inputSystem.displayFeedback(null, false, true);
       }
     };
-    rec.onerror = () => { failed = true; }; // p.ej. mic denegado → seguimos solo con click
+
+    rec.onerror = (e) => {
+      // Permanent failures: turn voice off and tell the panel. Everything else is transient.
+      if (e?.error === 'not-allowed' || e?.error === 'service-not-allowed' || e?.error === 'audio-capture') {
+        fatal = true;
+        this.voiceOn = false;
+        EventBus.emit('voice-state', false);
+        EventBus.emit('voice-denied', true);
+      }
+    };
+
     rec.onend = () => {
-      if (!failed && this.voiceOn && this.recognition === rec
+      if (!fatal && this.voiceOn && this.recognition === rec
         && this.currentAnswer === item.romaji && !this.gameOver) {
         try { rec.start(); } catch { /* already restarting */ }
+      } else if (this.recognition === rec) {
+        EventBus.emit('voice-listening', false);
       }
     };
+
+    EventBus.emit('voice-listening', true);
     try { rec.start(); } catch { /* concurrent start */ }
   }
 
   private stopVoiceListening(): void {
     const rec = this.recognition;
+    EventBus.emit('voice-listening', false);
+    EventBus.emit('voice-heard', '');
     if (!rec) return;
     this.recognition = undefined; // clear first so onend won't re-arm
+    rec.onstart = null;
     rec.onresult = null;
     rec.onend = null;
     rec.onerror = null;
